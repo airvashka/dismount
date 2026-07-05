@@ -41,7 +41,16 @@ const emptySels = () =>
     Sel
   >;
 
-const ROLE_TABS = ["Vše", "Tank", "Heal", "Support", "Melee", "Ranged", "Shape"];
+const ROLE_TABS = [
+  "Vše",
+  "Tank",
+  "Heal",
+  "Support",
+  "Melee",
+  "Ranged",
+  "Shape",
+  "Battlemount",
+];
 
 // Speciální pseudo-položka ve zbraních: značka vůdce party, ne skutečná
 // zbraň — jedno, jaký build/gear má caller ve skutečnosti nasazený.
@@ -101,7 +110,9 @@ function PickerField({
     // CALLER je jen u zbraní, mimo filtr rolí (není to skutečná zbraň) —
     // respektuje jen fulltext hledání.
     ...(cat === "weapon" && matchesQuery(CALLER_ITEM.name) ? [CALLER_ITEM] : []),
-    ...(cat === "weapon"
+    // Battlemounty mají vlastní záložku — jinde (Vše/Tank/...) se nepletou
+    // do běžných zbraní.
+    ...(cat === "weapon" && tab === "Battlemount"
       ? allMounts.filter((m) => matchesQuery(m.name))
       : []),
     ...(cat === "mount" ? SPECIAL_MOUNTS.filter((m) => matchesQuery(m.name)) : []),
