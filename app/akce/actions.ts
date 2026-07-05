@@ -6,6 +6,7 @@ import { getSessionUser } from "@/lib/session";
 import { atLeast } from "@/lib/roles";
 import * as events from "@/lib/events";
 import { parseSlotLines } from "@/lib/comp-format";
+import { announceEvent } from "@/lib/discord-notify";
 
 // Kdo smí co (jedno místo pro doladění pravidel):
 const CAN_CREATE = "caller" as const; // vypisovat akce
@@ -44,8 +45,25 @@ export async function createEventAction(formData: FormData) {
     slots
   );
 
+  await announce(id);
+
   revalidatePath("/akce");
   redirect(`/akce/${id}`);
+}
+
+/**
+ * Pošle/aktualizuje Discord oznámení akce. Chyba Discord API nikdy nesmí
+ * shodit samotné vypsání/úpravu akce — jen se zaloguje (viz sendChannelMessage).
+ */
+async function announce(eventId: number) {
+  const event = events.getEvent(eventId);
+  if (!event) return;
+  try {
+    const messageId = await announceEvent(event);
+    if (messageId) events.setDiscordMessageId(eventId, messageId);
+  } catch (err) {
+    console.error("Nepodařilo se poslat Discord oznámení akce", err);
+  }
 }
 
 export async function updateEventAction(formData: FormData) {
@@ -56,6 +74,7 @@ export async function updateEventAction(formData: FormData) {
 
   const eventId = Number(formData.get("event_id"));
   guardUnlocked(eventId);
+  const before = events.getEvent(eventId);
 
   const title = String(formData.get("title") ?? "").trim().slice(0, 120);
   const type = String(formData.get("type") ?? "CTA").trim().slice(0, 40);
@@ -72,6 +91,12 @@ export async function updateEventAction(formData: FormData) {
   const starts_at = startsAtRaw.replace("T", " ");
 
   events.updateEvent(eventId, { title, type, starts_at, description }, slots);
+
+  // Znovu oznámit do Discordu jen když se změnil název nebo čas — úprava
+  // gearu v kompozici by zbytečně spamovala kanál novou zprávou.
+  if (before && (before.title !== title || before.starts_at !== starts_at)) {
+    await announce(eventId);
+  }
 
   revalidatePath(`/akce/${eventId}`);
   revalidatePath("/akce");

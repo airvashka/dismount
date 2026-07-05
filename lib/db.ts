@@ -80,6 +80,10 @@ function migrate(db: Database.Database) {
     ["event_slots", "party", "TEXT NOT NULL DEFAULT ''"],
     ["comp_template_slots", "party", "TEXT NOT NULL DEFAULT ''"],
     ["signups", "offers", "TEXT NOT NULL DEFAULT ''"],
+    // Kdy byl poslán 1h reminder do Discordu — NULL = ještě neposlán.
+    // Cron kontrola podle tohohle sloupce nespamuje opakovaně; reset na
+    // NULL při posunu starts_at (updateEvent), ať se pošle znovu na nový čas.
+    ["events", "discord_reminded_at", "TEXT"],
   ];
   for (const [table, column, type] of ADDED_COLUMNS) {
     const cols = db

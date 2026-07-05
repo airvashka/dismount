@@ -10,6 +10,8 @@ export type EventRow = {
   description: string;
   created_by: string;
   created_by_name: string;
+  discord_message_id: string | null;
+  discord_reminded_at: string | null;
 };
 
 export type SlotRow = {
@@ -163,9 +165,13 @@ export function updateEvent(
   slots: NewSlot[]
 ): void {
   const db = getDb();
+  // Posun startu zruší už poslaný reminder, ať se cron pošle znovu na
+  // nový čas (viz getEventsDueForReminder/markReminderSent níž).
   const updateEventStmt = db.prepare(
     `UPDATE events SET title = @title, type = @type, starts_at = @starts_at,
-      description = @description WHERE id = @id`
+      description = @description,
+      discord_reminded_at = CASE WHEN starts_at = @starts_at THEN discord_reminded_at ELSE NULL END
+     WHERE id = @id`
   );
   const deleteSlots = db.prepare("DELETE FROM event_slots WHERE event_id = ?");
   const insertSlot = db.prepare(
@@ -180,6 +186,29 @@ export function updateEvent(
     );
   });
   tx();
+}
+
+export function setDiscordMessageId(id: number, messageId: string): void {
+  getDb()
+    .prepare("UPDATE events SET discord_message_id = ? WHERE id = ?")
+    .run(messageId, id);
+}
+
+/** Akce začínající za ~50–70 min, které ještě nedostaly reminder. */
+export function getEventsDueForReminder(): EventRow[] {
+  return getDb()
+    .prepare(
+      `SELECT * FROM events
+       WHERE discord_reminded_at IS NULL
+         AND starts_at BETWEEN datetime('now', '+50 minutes') AND datetime('now', '+70 minutes')`
+    )
+    .all() as EventRow[];
+}
+
+export function markReminderSent(id: number): void {
+  getDb()
+    .prepare("UPDATE events SET discord_reminded_at = datetime('now') WHERE id = ?")
+    .run(id);
 }
 
 /**

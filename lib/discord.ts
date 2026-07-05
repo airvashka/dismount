@@ -40,3 +40,42 @@ export async function fetchGuildMember(
 export function isDiscordConfigured(): boolean {
   return Boolean(process.env.AUTH_DISCORD_ID && process.env.AUTH_DISCORD_SECRET);
 }
+
+export type DiscordEmbed = {
+  title?: string;
+  description?: string;
+  color?: number;
+  fields?: Array<{ name: string; value: string; inline?: boolean }>;
+};
+
+/**
+ * Pošle zprávu do Discord kanálu (embed a/nebo obyčejný text). Bez
+ * DISCORD_BOT_TOKEN nebo bez channelId je no-op (vrátí null) — appka
+ * funguje dál i bez nakonfigurovaného bota, jen nic neposílá.
+ */
+export async function sendChannelMessage(
+  channelId: string,
+  payload: { content?: string; embeds?: DiscordEmbed[] }
+): Promise<string | null> {
+  const token = process.env.DISCORD_BOT_TOKEN;
+  if (!token || !channelId) return null;
+  try {
+    const res = await fetch(`${API}/channels/${channelId}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      console.error("Discord API: nelze poslat zprávu", res.status, await res.text());
+      return null;
+    }
+    const msg = (await res.json()) as { id: string };
+    return msg.id;
+  } catch (err) {
+    console.error("Discord API: chyba při odesílání zprávy", err);
+    return null;
+  }
+}
