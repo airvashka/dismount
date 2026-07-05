@@ -326,42 +326,56 @@ export type GuildKill = {
   time: string;
 };
 
-/** Top killy guildy za posledních N hodin (podle fame); null = API nedostupné. */
+type KillEvent = {
+  TimeStamp: string;
+  TotalVictimKillFame: number;
+  Killer?: { Name?: string; GuildId?: string };
+  Victim?: { Name?: string; GuildName?: string };
+};
+
+/**
+ * Top killy guildy za posledních N hodin (podle fame); null = API nedostupné.
+ * API vrací max 51 eventů na stránku (od nejnovějšího) — stránkuje se,
+ * dokud okno nepokryjeme, max 5 stránek.
+ */
 export async function fetchTopKills(
-  hours = 24,
-  top = 5
+  hours = 48,
+  top = 10
 ): Promise<GuildKill[] | null> {
+  const cutoff = Date.now() - hours * 3600_000;
+  const all: KillEvent[] = [];
   try {
-    const res = await fetch(
-      `https://gameinfo-ams.albiononline.com/api/gameinfo/events?guildId=${GAMEINFO_GUILD_ID}&limit=51`,
-      { next: { revalidate: 900 }, signal: AbortSignal.timeout(6000) }
-    );
-    if (!res.ok) return null;
-    const events = (await res.json()) as Array<{
-      TimeStamp: string;
-      TotalVictimKillFame: number;
-      Killer?: { Name?: string; GuildId?: string };
-      Victim?: { Name?: string; GuildName?: string };
-    }>;
-    const cutoff = Date.now() - hours * 3600_000;
-    return events
-      .filter(
-        (e) =>
-          e.Killer?.GuildId === GAMEINFO_GUILD_ID &&
-          new Date(e.TimeStamp).getTime() > cutoff
-      )
-      .map((e) => ({
-        killer: e.Killer?.Name ?? "?",
-        victim: e.Victim?.Name ?? "?",
-        victimGuild: e.Victim?.GuildName ?? "",
-        fame: Number(e.TotalVictimKillFame ?? 0),
-        time: e.TimeStamp,
-      }))
-      .sort((a, b) => b.fame - a.fame)
-      .slice(0, top);
+    for (let page = 0; page < 5; page++) {
+      const res = await fetch(
+        `https://gameinfo-ams.albiononline.com/api/gameinfo/events?guildId=${GAMEINFO_GUILD_ID}&limit=51&offset=${page * 51}`,
+        { next: { revalidate: 900 }, signal: AbortSignal.timeout(6000) }
+      );
+      if (!res.ok) break;
+      const events = (await res.json()) as KillEvent[];
+      if (events.length === 0) break;
+      all.push(...events);
+      const oldest = events[events.length - 1];
+      if (new Date(oldest.TimeStamp).getTime() < cutoff) break;
+    }
   } catch {
-    return null;
+    // co máme, to máme — případně prázdno
   }
+  if (all.length === 0) return null;
+  return all
+    .filter(
+      (e) =>
+        e.Killer?.GuildId === GAMEINFO_GUILD_ID &&
+        new Date(e.TimeStamp).getTime() > cutoff
+    )
+    .map((e) => ({
+      killer: e.Killer?.Name ?? "?",
+      victim: e.Victim?.Name ?? "?",
+      victimGuild: e.Victim?.GuildName ?? "",
+      fame: Number(e.TotalVictimKillFame ?? 0),
+      time: e.TimeStamp,
+    }))
+    .sort((a, b) => b.fame - a.fame)
+    .slice(0, top);
 }
 
 /** Statistiky guildy z killboardu; null když API zrovna neodpovídá. */

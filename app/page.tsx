@@ -4,20 +4,6 @@ import { fetchGuildStats, fetchTopKills } from "@/lib/albion";
 
 const DISCORD_INVITE = "https://discord.gg/RqjY3Mgkj";
 
-// Zbrojnice — dekorativní pás ikon pod hero sekcí
-const ARSENAL = [
-  "T8_2H_MACE",
-  "T8_2H_DUALMACE_AVALON",
-  "T8_MAIN_HOLYSTAFF_AVALON",
-  "T8_2H_ARCANESTAFF_CRYSTAL",
-  "T8_2H_DUALSCIMITAR_UNDEAD",
-  "T8_2H_HALBERD_MORGANA",
-  "T8_2H_CURSEDSTAFF_MORGANA",
-  "T8_2H_SHAPESHIFTER_CRYSTAL",
-  "T8_2H_KNUCKLES_KEEPER",
-  "T8_2H_DUALHAMMER_HELL",
-];
-
 function fmtFame(n: number): string {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1).replace(".", ",")} mld`;
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")} mil`;
@@ -105,11 +91,11 @@ export default async function Home() {
 
         </div>
 
-        {/* Top killy za 24 h (killboard) */}
+        {/* Top killy za 48 h (killboard) */}
         {kills && kills.length > 0 && (
-          <div className="relative mx-auto max-w-xl px-4 pb-12">
+          <div className="relative mx-auto max-w-xl px-4 pb-16">
             <h2 className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted">
-              ⚔ Top killy za posledních 24 hodin
+              ⚔ Top killy za posledních 48 hodin
             </h2>
             <ol className="mt-4 space-y-1.5">
               {kills.map((k, i) => (
@@ -137,22 +123,6 @@ export default async function Home() {
           </div>
         )}
 
-        {/* Zbrojnice */}
-        <div className="relative mx-auto max-w-3xl px-4 pb-16">
-          <div className="flex items-center justify-center gap-3 sm:gap-4">
-            {ARSENAL.map((item) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={item}
-                src={`/api/icon/${item}.png?size=64`}
-                alt=""
-                width={52}
-                height={52}
-                className="opacity-50 grayscale transition-all duration-200 hover:opacity-100 hover:grayscale-0 hover:scale-125"
-              />
-            ))}
-          </div>
-        </div>
       </section>
     </div>
   );
