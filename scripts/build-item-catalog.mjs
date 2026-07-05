@@ -47,9 +47,14 @@ const CATS = {
     /^CAPE/.test(id) &&
     !/CAPE_ARENA|CAPE_(CLOTH|LEATHER|PLATE)_|_BP$/.test(id),
   food: (id) => /^MEAL_/.test(id),
-  // MOUNT_ = jízdní zvířata (battlemounty i transportní); MOUNTUPGRADE_
-  // (sedla/doplňky) záměrně mimo, to nejsou mounty samotné.
-  mount: (id) => /^MOUNT_/.test(id),
+  // Jen skutečné "Battle Mount" (wiki.albiononline.com/wiki/Category:Battle_Mount)
+  // — basilisk/ballista rodina; jízdní/transportní/dekorativní mounty (kůň,
+  // vůl, jelen, sezónní skiny...) sem záměrně nepatří. Prestižní battlemounty
+  // bez T-tieru (Behemoth, Juggernaut...) jsou ručně v SPECIAL_MOUNTS (lib/albion.ts).
+  mount: (id) =>
+    /^MOUNT_(SWAMPDRAGON_BATTLE|ARMORED_SWAMPDRAGON_BATTLE|SIEGE_BALLISTA)$/.test(
+      id
+    ),
 };
 
 const catalog = Object.fromEntries(Object.keys(CATS).map((k) => [k, []]));
