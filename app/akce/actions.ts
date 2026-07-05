@@ -48,6 +48,36 @@ export async function createEventAction(formData: FormData) {
   redirect(`/akce/${id}`);
 }
 
+export async function updateEventAction(formData: FormData) {
+  const user = await getSessionUser();
+  if (!user || !atLeast(user.webRole, CAN_CREATE)) {
+    throw new Error("Upravovat akce může jen caller nebo vedení.");
+  }
+
+  const eventId = Number(formData.get("event_id"));
+  guardUnlocked(eventId);
+
+  const title = String(formData.get("title") ?? "").trim().slice(0, 120);
+  const type = String(formData.get("type") ?? "CTA").trim().slice(0, 40);
+  const startsAtRaw = String(formData.get("starts_at") ?? "").trim().slice(0, 20);
+  const description = String(formData.get("description") ?? "").trim().slice(0, 3000);
+  const slots = parseSlotLines(
+    String(formData.get("slots") ?? "").slice(0, 30000)
+  ).slice(0, 200);
+
+  if (!title || !startsAtRaw) {
+    throw new Error("Chybí název nebo čas akce.");
+  }
+
+  const starts_at = startsAtRaw.replace("T", " ");
+
+  events.updateEvent(eventId, { title, type, starts_at, description }, slots);
+
+  revalidatePath(`/akce/${eventId}`);
+  revalidatePath("/akce");
+  redirect(`/akce/${eventId}`);
+}
+
 /** Zamčenou (proběhlou) akci už nejde měnit — přesměruje s hláškou. */
 function guardUnlocked(eventId: number) {
   const event = events.getEvent(eventId);

@@ -151,6 +151,38 @@ export function deleteEvent(id: number): void {
 }
 
 /**
+ * Upraví akci (datum, popis, kompozici...) i po přihlášení hráčů. Sloty se
+ * nahrazují celé (smazání + nová sada) — díky `ON DELETE SET NULL` u
+ * `signups.slot_id` se přiřazení hráči bezpečně vrátí mezi čekající
+ * (jejich přihláška/nabídka zůstane), místo zůstat viset na neexistujícím
+ * slotu. Caller je pak musí přerozřadit.
+ */
+export function updateEvent(
+  id: number,
+  data: { title: string; type: string; starts_at: string; description: string },
+  slots: NewSlot[]
+): void {
+  const db = getDb();
+  const updateEventStmt = db.prepare(
+    `UPDATE events SET title = @title, type = @type, starts_at = @starts_at,
+      description = @description WHERE id = @id`
+  );
+  const deleteSlots = db.prepare("DELETE FROM event_slots WHERE event_id = ?");
+  const insertSlot = db.prepare(
+    `INSERT INTO event_slots (event_id, position, party, role_name, build, note)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  );
+  const tx = db.transaction(() => {
+    updateEventStmt.run({ ...data, id });
+    deleteSlots.run(id);
+    slots.forEach((s, i) =>
+      insertSlot.run(id, i, s.party, s.role_name, s.build, s.note)
+    );
+  });
+  tx();
+}
+
+/**
  * Přihlásí hráče na akci (na slot, nebo bez slotu — čeká na rozřazení).
  * Případnou předchozí přihlášku na téže akci nahradí; prázdná poznámka
  * a nabídky se převezmou z předchozí přihlášky (přesun neztrácí info).

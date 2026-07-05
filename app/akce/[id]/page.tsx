@@ -34,6 +34,7 @@ export default async function AkceDetailPage({
   const locked = isLocked(event);
   const canDelete =
     event.created_by === user.discordId || atLeast(user.webRole, "admin");
+  const canEdit = atLeast(user.webRole, "caller") && !locked;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
@@ -49,20 +50,30 @@ export default async function AkceDetailPage({
             <LocalTime utc={event.starts_at} /> · vypsal {event.created_by_name}
           </p>
         </div>
-        {canDelete && (
-          <ConfirmForm
-            action={deleteEventAction}
-            message={`Opravdu zrušit akci „${event.title}"? Smažou se i všechny přihlášky.`}
-          >
-            <input type="hidden" name="event_id" value={event.id} />
-            <button
-              type="submit"
-              className="rounded border border-border px-3 py-1 text-xs text-muted hover:border-red-500 hover:text-red-400 cursor-pointer"
+        <div className="flex shrink-0 items-center gap-2">
+          {canEdit && (
+            <Link
+              href={`/akce/${event.id}/upravit`}
+              className="rounded border border-border px-3 py-1 text-xs text-muted hover:border-accent hover:text-accent"
             >
-              Zrušit akci
-            </button>
-          </ConfirmForm>
-        )}
+              Upravit
+            </Link>
+          )}
+          {canDelete && (
+            <ConfirmForm
+              action={deleteEventAction}
+              message={`Opravdu zrušit akci „${event.title}"? Smažou se i všechny přihlášky.`}
+            >
+              <input type="hidden" name="event_id" value={event.id} />
+              <button
+                type="submit"
+                className="rounded border border-border px-3 py-1 text-xs text-muted hover:border-red-500 hover:text-red-400 cursor-pointer"
+              >
+                Zrušit akci
+              </button>
+            </ConfirmForm>
+          )}
+        </div>
       </div>
 
       {locked && (
