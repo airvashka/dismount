@@ -47,7 +47,7 @@ function OfferChips({
   if (offers.length === 0) return null;
   let order = 0;
   return (
-    <span className="inline-flex flex-wrap items-center gap-1">
+    <span className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap">
       {offers.map((o) => {
         if (o === "FILL") {
           return (
@@ -228,7 +228,7 @@ export function EventBoard({
         </div>
       )}
 
-      <div className="mt-4 gap-6 md:grid md:grid-cols-[1fr_320px] md:items-start">
+      <div className="mt-4 gap-6 md:grid md:grid-cols-[1fr_380px] md:items-start">
         {/* Levý sloupec — party */}
         <div>
           {groups.map((group, gi) => {
