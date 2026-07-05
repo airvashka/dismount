@@ -319,6 +319,7 @@ export type GuildStats = {
 };
 
 export type GuildKill = {
+  eventId: number;
   killer: string;
   victim: string;
   victimGuild: string;
@@ -327,6 +328,7 @@ export type GuildKill = {
 };
 
 type KillEvent = {
+  EventId: number;
   TimeStamp: string;
   TotalVictimKillFame: number;
   Killer?: { Name?: string; GuildId?: string };
@@ -368,6 +370,7 @@ export async function fetchTopKills(
         new Date(e.TimeStamp).getTime() > cutoff
     )
     .map((e) => ({
+      eventId: e.EventId,
       killer: e.Killer?.Name ?? "?",
       victim: e.Victim?.Name ?? "?",
       victimGuild: e.Victim?.GuildName ?? "",

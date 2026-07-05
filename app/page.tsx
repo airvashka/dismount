@@ -99,24 +99,28 @@ export default async function Home() {
             </h2>
             <ol className="mt-4 space-y-1.5">
               {kills.map((k, i) => (
-                <li
-                  key={`${k.killer}-${k.time}`}
-                  className="flex items-center gap-3 rounded-lg border border-border bg-surface/70 px-4 py-2 text-sm"
-                >
-                  <span className="w-5 text-right font-bold text-accent">
-                    {i + 1}.
-                  </span>
-                  <span className="font-semibold text-accent">{k.killer}</span>
-                  <span className="text-muted">⚔</span>
-                  <span className="text-red-300">
-                    {k.victim}
-                    {k.victimGuild && (
-                      <span className="text-muted"> [{k.victimGuild}]</span>
-                    )}
-                  </span>
-                  <span className="ml-auto font-mono text-xs text-emerald-400">
-                    {fmtFame(k.fame)} fame
-                  </span>
+                <li key={k.eventId}>
+                  <a
+                    href={`https://albiononline.com/killboard/kill/${k.eventId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 rounded-lg border border-border bg-surface/70 px-4 py-2 text-sm transition-colors hover:border-accent hover:bg-surface"
+                  >
+                    <span className="w-5 text-right font-bold text-accent">
+                      {i + 1}.
+                    </span>
+                    <span className="font-semibold text-accent">{k.killer}</span>
+                    <span className="text-muted">⚔</span>
+                    <span className="text-red-300">
+                      {k.victim}
+                      {k.victimGuild && (
+                        <span className="text-muted"> [{k.victimGuild}]</span>
+                      )}
+                    </span>
+                    <span className="ml-auto font-mono text-xs text-emerald-400">
+                      {fmtFame(k.fame)} fame
+                    </span>
+                  </a>
                 </li>
               ))}
             </ol>
