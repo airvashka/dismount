@@ -92,12 +92,18 @@ function PickerField({
   const matchesQuery = (name: string) =>
     !query.trim() || name.toLowerCase().includes(query.trim().toLowerCase());
 
+  // Battlemounty (stejný zdroj jako pole Mount, žádná duplicitní definice)
+  // patří i do Zbraně — jde o samostatnou "roli" bez nutnosti skutečné
+  // zbraně, přesně jako CALLER.
+  const allMounts = [...SPECIAL_MOUNTS, ...ITEM_CATALOG.mount];
+
   const list = [
     // CALLER je jen u zbraní, mimo filtr rolí (není to skutečná zbraň) —
     // respektuje jen fulltext hledání.
     ...(cat === "weapon" && matchesQuery(CALLER_ITEM.name) ? [CALLER_ITEM] : []),
-    // Prestižní Season battlemounty (Behemoth, Juggernaut, Ballista...) —
-    // nejsou v generovaném katalogu (jiná struktura dat), doplněné ručně.
+    ...(cat === "weapon"
+      ? allMounts.filter((m) => matchesQuery(m.name))
+      : []),
     ...(cat === "mount" ? SPECIAL_MOUNTS.filter((m) => matchesQuery(m.name)) : []),
     ...ITEM_CATALOG[cat].filter(
       (it) =>
@@ -258,7 +264,7 @@ export function SlotPicker({
   useEffect(() => {
     if (!prefill) return;
     const next = emptySels();
-    const addPart = (part: string) => {
+    const addPart = (part: string, isRoleField: boolean) => {
       // "N.M" (N=4-8, i libovolný strop, ne jen T8) -> T(8+M) interně;
       // "T9"-"T12" přímo; jinak T4-T8 z prostého zápisu.
       let tier = 8;
@@ -275,7 +281,11 @@ export function SlotPicker({
         }
         const hit = findCatalogItem(seg);
         if (!hit) continue;
-        const box = next[hit.cat];
+        // Battlemount jako role_name (bez skutečné zbraně) patří do pole
+        // Zbraň, i když item sám je kategorie "mount" — jinak by po ✎ zůstal
+        // Zbraň prázdná a "Uložit"/"Přidat" by šlo zakázané.
+        const targetCat = isRoleField && hit.cat === "mount" ? "weapon" : hit.cat;
+        const box = next[targetCat];
         if (
           box.items.length < MAX_VARIANTS &&
           !box.items.some((x) => x.id === hit.item.id)
@@ -288,11 +298,11 @@ export function SlotPicker({
         }
       }
     };
-    addPart(prefill.role_name);
+    addPart(prefill.role_name, true);
     for (const part of prefill.build.split(",").map((p) => p.trim()).filter(Boolean)) {
-      addPart(part);
+      addPart(part, false);
     }
-    if (prefill.note) addPart(prefill.note);
+    if (prefill.note) addPart(prefill.note, false);
     setSels(next);
   }, [prefill]);
 
