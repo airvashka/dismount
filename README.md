@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# dismount.team
 
-## Getting Started
+Web guildy **Dismount** (Albion Online, Europe server): veřejný onesite + interní
+přihlašování na akce (Call to Arms) s rozřazováním hráčů callerem.
 
-First, run the development server:
+## Funkce
+
+- **Login přes Discord** (OAuth2) — práva na webu se řídí rolemi na guild
+  Discord serveru (bot je čte přes API, žádná hesla, žádná druhá správa účtů).
+- **Akce (CTA)**: caller vypíše akci s kompozicí (party po max 20 hráčích),
+  hráči se hlásí výběrem rolí podle priority nebo FILL, caller je rozhazuje
+  na sloty drag & dropem. 2 h po začátku se akce zamkne a přesune do archivu.
+- **Kompozice**: knihovna šablon — editace textem (podpora copy-paste přímo
+  z Google Sheets), nebo item pickerem s gridem ikon, filtrem rolí
+  (Tank/Heal/Support/…) a variantami itemů.
+- **Ikony itemů** z oficiálního render API Albionu, s vlastní disk cache
+  (`/api/icon`), rozpoznávání tierů a enchantů („T9" = 8.1 s tečkou)
+  i guildovního slangu.
+- Živé statistiky guildy z oficiálního gameinfo API na titulce.
+
+## Stack
+
+Next.js (app router) · TypeScript · Tailwind CSS · Auth.js (Discord provider) ·
+better-sqlite3 · Docker
+
+## Vývoj
 
 ```bash
+npm install
+cp .env.example .env.local   # vyplnit Discord klíče, viz komentáře
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Bez Discord klíčů web běží v režimu bez loginu; pro lokální testování rolí
+lze v dev nastavit `DEV_FAKE_ROLE` (viz `.env.example` / `lib/session.ts`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Produkce
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+docker compose build && docker compose up -d
+```
 
-## Learn More
+SQLite databáze a cache ikon žijí ve volume `./data`. Za reverse proxy
+(Caddy/nginx) s TLS; aplikace poslouchá na portu 3000.
 
-To learn more about Next.js, take a look at the following resources:
+## Údržba katalogu itemů
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Po herním patchi s novými itemy:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+node scripts/build-item-catalog.mjs   # stáhne čerstvý dump (ao-data/ao-bin-dumps)
+node scripts/warm-icons.mjs           # předehřeje cache ikon
+```

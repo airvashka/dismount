@@ -1,0 +1,14 @@
+# Vzorová compose — zkopíruj jako docker-compose.yml a uprav podle svého
+# prostředí (port / síť reverse proxy).
+name: dismount
+
+services:
+  web:
+    build: .
+    container_name: dismount-web
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data

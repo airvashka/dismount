@@ -1,26 +1,39 @@
 @import "tailwindcss";
 
+/* Tmavé téma napevno — guild web, žádný light mode. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0b0d12;
+  --surface: #121620;
+  --border: #232a3a;
+  --foreground: #e7eaf0;
+  --muted: #8b93a7;
+  --accent: #e0a83c; /* albion gold */
+  --accent-hover: #f0bc55;
+  --discord: #5865f2;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-discord: var(--discord);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Ikona kalendáře v datetime inputu je defaultně černá — přebarvit na zlatou */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(72%) sepia(55%) saturate(520%) hue-rotate(357deg)
+    brightness(97%) contrast(92%);
+  cursor: pointer;
 }

@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# SQLite data
+/data/
+
+# interní dokumentace agenta/ops (IP serverů, deploy postupy) — nepatří do veřejného repa
+AGENTS.md
+CLAUDE.md
+.claude/
+
+# guildovní data (kompozice ze sheetu)
+scripts/seed-heavybrawl.mjs
+
+# reálná deploy compose (síť/porty konkrétní VPS) — veřejná je example varianta
+docker-compose.yml
