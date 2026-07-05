@@ -8,7 +8,7 @@
 
 import { useState, useTransition } from "react";
 import { PARTY_MAX, parseOffers } from "@/lib/comp-format";
-import { slotIconUrl, slotRoleClass } from "@/lib/albion";
+import { slotIconUrl } from "@/lib/albion";
 import { GearChips } from "@/components/gear-chips";
 import { ItemIcon } from "@/components/item-icon";
 import {
@@ -34,15 +34,15 @@ export type BoardSignup = {
   offers: string;
 };
 
-const ROLE_FILTERS = ["Vše", "Tank", "Heal", "Support", "Melee", "Ranged", "Shape"];
-
 /** Kompaktní zobrazení nabídek hráče: FILL + očíslované ikony rolí. */
 function OfferChips({
   offers,
   slots,
+  size = 20,
 }: {
   offers: string[];
   slots: BoardSlot[];
+  size?: number;
 }) {
   if (offers.length === 0) return null;
   let order = 0;
@@ -53,7 +53,7 @@ function OfferChips({
           return (
             <span
               key="FILL"
-              className="rounded border border-emerald-500 px-1 py-px text-[10px] font-semibold text-emerald-400"
+              className="rounded border border-emerald-500 px-1.5 py-px text-[11px] font-semibold text-emerald-400"
             >
               FILL
             </span>
@@ -66,10 +66,10 @@ function OfferChips({
           <span
             key={o}
             title={o}
-            className="inline-flex items-center gap-0.5 text-[10px] text-muted"
+            className="inline-flex items-center gap-0.5 text-[11px] text-muted"
           >
             <span className="font-semibold text-accent">{order}.</span>
-            {icon ? <ItemIcon src={icon} size={20} /> : <span>{o}</span>}
+            {icon ? <ItemIcon src={icon} size={size} /> : <span>{o}</span>}
           </span>
         );
       })}
@@ -98,7 +98,6 @@ export function EventBoard({
   const [hoverPanel, setHoverPanel] = useState(false);
   const [pickedRoles, setPickedRoles] = useState<string[]>([]);
   const [fill, setFill] = useState(false);
-  const [roleFilter, setRoleFilter] = useState("Vše");
 
   const bySlot = new Map(signups.filter((s) => s.slot_id).map((s) => [s.slot_id, s]));
   const waiting = signups.filter((s) => s.slot_id === null);
@@ -201,28 +200,9 @@ export function EventBoard({
         </div>
       )}
 
-      <div className="mt-4 gap-6 md:grid md:grid-cols-[1fr_270px] md:items-start">
+      <div className="mt-4 gap-6 md:grid md:grid-cols-[1fr_320px] md:items-start">
         {/* Levý sloupec — party */}
         <div>
-          {/* Jemný filtr rolí */}
-          <div className="flex flex-wrap items-center gap-1">
-            {ROLE_FILTERS.map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setRoleFilter(f)}
-                className={
-                  "rounded px-2 py-0.5 text-[11px] border cursor-pointer " +
-                  (roleFilter === f
-                    ? "border-accent bg-accent/20 text-accent font-semibold"
-                    : "border-border text-muted hover:border-accent")
-                }
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-
           {groups.map((group, gi) => {
             const takenCount = group.slots.filter((s) => bySlot.has(s.id)).length;
             return (
@@ -269,9 +249,8 @@ export function EventBoard({
                         const icon = slotIconUrl(slot.role_name, slot.build);
                         const droppable = isCaller && dragged;
                         const matched = slotMatchesDragged(slot);
-                        const slotRole = slotRoleClass(slot.role_name);
-                        const dimmed =
-                          roleFilter !== "Vše" && slotRole !== null && slotRole !== roleFilter;
+                        // Při tažení: sedící sloty výrazně svítí, ostatní se ztlumí
+                        const dimmed = Boolean(dragged) && !matched && !taken;
                         return (
                           <tr
                             key={slot.id}
@@ -289,11 +268,11 @@ export function EventBoard({
                             }
                             className={
                               "group border-t border-border first:border-t-0 transition-all " +
-                              (dimmed ? "opacity-25 " : "") +
+                              (dimmed ? "opacity-30 " : "") +
                               (hoverSlot === slot.id
-                                ? "bg-accent/20 "
-                                : matched
-                                  ? "bg-accent/5 "
+                                ? "bg-accent/40 shadow-[inset_0_0_0_2px_var(--accent)] "
+                                : matched && !taken
+                                  ? "bg-accent/15 shadow-[inset_3px_0_0_var(--accent)] "
                                   : "")
                             }
                           >
@@ -541,7 +520,7 @@ export function EventBoard({
                       }
                       title={s.note || undefined}
                       className={
-                        "flex items-center gap-1.5 rounded border border-border bg-surface px-2 py-1 text-xs " +
+                        "flex items-center gap-2 rounded border border-border bg-surface px-2.5 py-1.5 text-sm " +
                         (isCaller ? "cursor-grab active:cursor-grabbing hover:border-accent " : "") +
                         (dragged?.id === s.id ? "opacity-50 " : "")
                       }
@@ -559,7 +538,7 @@ export function EventBoard({
                       >
                         {s.display_name}
                       </span>
-                      <OfferChips offers={offers} slots={slots} />
+                      <OfferChips offers={offers} slots={slots} size={30} />
                     </li>
                   );
                 })}
