@@ -1,7 +1,7 @@
 // Build rozsekaný na kusy gearu — každý s ikonkou z render API (když ji poznáme).
 // Hover na ikonku ukáže plovoucí zvětšeninu (ItemIcon).
 
-import { gearIconUrl } from "@/lib/albion";
+import { gearIconUrls } from "@/lib/albion";
 import { ItemIcon } from "@/components/item-icon";
 
 export function GearChips({
@@ -28,10 +28,12 @@ export function GearChips({
       }
     >
       {parts.map((part, i) => {
-        const url = gearIconUrl(part);
+        const urls = gearIconUrls(part);
         return (
           <span key={i} className="inline-flex items-center gap-1 whitespace-nowrap">
-            {url && <ItemIcon src={url} size={size} />}
+            {urls.map((url, j) => (
+              <ItemIcon key={j} src={url} size={size} />
+            ))}
             {part}
           </span>
         );

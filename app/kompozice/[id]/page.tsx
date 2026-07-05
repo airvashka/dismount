@@ -28,7 +28,7 @@ export default async function EditKompozicePage({
   const slotsText = template ? getTemplateText(template.id) : "";
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
+    <div className="mx-auto max-w-6xl px-4 py-12">
       <Link href="/kompozice" className="text-sm text-muted hover:text-foreground">
         ← zpět na kompozice
       </Link>
@@ -55,7 +55,7 @@ export default async function EditKompozicePage({
 
       <form action={saveTemplateAction} className="mt-6 space-y-6">
         {template && <input type="hidden" name="id" value={template.id} />}
-        <label className="block">
+        <label className="block max-w-md">
           <span className="text-sm text-muted">Název (např. Heavybrawl, TAPka, Brawl)</span>
           <input
             name="name"

@@ -287,8 +287,13 @@ export function slotRoleClass(roleName: string): string | null {
   return hit && hit.cat === "weapon" ? roleClass(hit.item.id) : null;
 }
 
+// "CALLER" není zbraň — je to značka pro vůdčí slot party (jedno jaký
+// build/gear má u sebe napsaný). Vlastní lokální ikona, ne z render API.
+export const CALLER_ICON = "/icons/caller-crown.svg";
+
 /** URL ikony pro slot podle názvu role (+ případně buildu). */
 export function slotIconUrl(roleName: string, build = ""): string | null {
+  if (/^caller$/i.test(roleName.trim())) return CALLER_ICON;
   const exact = catalogIconUrl(roleName);
   if (exact) return exact;
   const haystack = `${roleName} ${build}`;
@@ -298,14 +303,31 @@ export function slotIconUrl(roleName: string, build = ""): string | null {
   return null;
 }
 
-/** URL ikony pro kus gearu / jídlo (jedna položka buildu, např. "Hellion hood T7+"). */
-export function gearIconUrl(part: string): string | null {
-  const exact = catalogIconUrl(part);
-  if (exact) return exact;
+/** Jedno jméno (bez tieru) -> URL ikony se zadaným (sdíleným) tierem/enchantem. */
+function resolveVariantIcon(name: string, te: TierEnch): string | null {
+  const id = NAME_TO_ID.get(cleanPartName(name).toLowerCase());
+  if (id) return iconUrl(`T${te.tier}_${id}`, te);
   for (const [re, item] of GEAR_ICONS) {
-    if (re.test(part)) return iconUrl(item, tierEnchFromText(part));
+    if (re.test(name)) return iconUrl(item, te);
   }
   return null;
+}
+
+/**
+ * URL ikon pro kus gearu / jídlo (jedna položka buildu, např. "Hellion hood
+ * T7+"). Podporuje až 3 varianty oddělené „/" (např. "Stalker Shoes/Royal
+ * Shoes T7") — tier/enchant je pro všechny varianty společný (bere se
+ * z celého textu), vrátí ikonu pro KAŽDOU rozpoznanou variantu.
+ */
+export function gearIconUrls(part: string): string[] {
+  const te = tierEnchFromText(part) ?? { tier: 8, ench: 0 };
+  const names = part.split("/").map((s) => s.trim()).filter(Boolean);
+  const urls: string[] = [];
+  for (const name of names) {
+    const url = resolveVariantIcon(name, te);
+    if (url) urls.push(url);
+  }
+  return urls;
 }
 
 // --- Oficiální gameinfo API (Europe server) — statistiky guildy ---

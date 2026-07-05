@@ -10,6 +10,7 @@ import {
   ITEM_CATALOG,
   findCatalogItem,
   roleClass,
+  CALLER_ICON,
   type CatalogCategory,
   type CatalogItem,
 } from "@/lib/albion";
@@ -40,11 +41,31 @@ const emptySels = () =>
 
 const ROLE_TABS = ["Vše", "Tank", "Heal", "Support", "Melee", "Ranged", "Shape"];
 
+// Speciální pseudo-položka ve zbraních: značka vůdce party, ne skutečná
+// zbraň — jedno, jaký build/gear má caller ve skutečnosti nasazený.
+const CALLER_ITEM: CatalogItem = { id: "CALLER", name: "CALLER", maxTier: 8 };
+
 // Tiery v selectu: T9–T11 = slang pro enchantovanou T8 (8.1/8.2/8.3),
 // ikona dostane enchant tečky přes @.
 const TIER_OPTIONS = [6, 7, 8, 9, 10, 11];
 
+/**
+ * Některé itemy (hlavně jídlo) reálně nemají T8 verzi — např. "Avalonian
+ * Pork Omelette" končí na T7, T8 té dané ikony vůbec neexistuje. Nabídnout
+ * pro ně T6/T7/T8 by dalo řádek, jehož text neodpovídá tomu, co se doopravdy
+ * vykreslí (base se stejně tiše zaklapne na T7). Proto: když vybraný kus
+ * (nebo nejnižší z variant) má strop pod T8, nabídneme jen jeho vlastní
+ * max tier + 3 enchant/quality tečky nad ním — žádný nesmyslný nižší tier.
+ */
+function tierOptionsFor(items: CatalogItem[]): number[] {
+  if (items.length === 0) return TIER_OPTIONS;
+  const maxTier = Math.min(...items.map((i) => i.maxTier));
+  if (maxTier >= 8) return TIER_OPTIONS;
+  return [maxTier, 9, 10, 11];
+}
+
 const iconOf = (item: CatalogItem, tier: number) => {
+  if (item.id === "CALLER") return CALLER_ICON;
   const ench = tier > 8 ? Math.min(4, tier - 8) : 0;
   const base = Math.min(8, tier, item.maxTier);
   return `${RENDER}/T${base}_${item.id}${ench ? `@${ench}` : ""}.png?quality=4&size=64`;
@@ -65,12 +86,19 @@ function PickerField({
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState("Vše");
 
-  const list = ITEM_CATALOG[cat].filter(
-    (it) =>
-      (!query.trim() ||
-        it.name.toLowerCase().includes(query.trim().toLowerCase())) &&
-      (cat !== "weapon" || tab === "Vše" || roleClass(it.id) === tab)
-  );
+  const matchesQuery = (name: string) =>
+    !query.trim() || name.toLowerCase().includes(query.trim().toLowerCase());
+
+  const list = [
+    // CALLER je jen u zbraní, mimo filtr rolí (není to skutečná zbraň) —
+    // respektuje jen fulltext hledání.
+    ...(cat === "weapon" && matchesQuery(CALLER_ITEM.name) ? [CALLER_ITEM] : []),
+    ...ITEM_CATALOG[cat].filter(
+      (it) =>
+        matchesQuery(it.name) &&
+        (cat !== "weapon" || tab === "Vše" || roleClass(it.id) === tab)
+    ),
+  ];
 
   const toggleItem = (it: CatalogItem) => {
     const has = sel.items.some((x) => x.id === it.id);
@@ -79,7 +107,9 @@ function PickerField({
       : sel.items.length < MAX_VARIANTS
         ? [...sel.items, it]
         : sel.items;
-    onChange({ ...sel, items });
+    const options = tierOptionsFor(items);
+    const tier = options.includes(sel.tier) ? sel.tier : options[0];
+    onChange({ ...sel, items, tier });
   };
 
   return (
@@ -110,7 +140,7 @@ function PickerField({
             onChange={(e) => onChange({ ...sel, tier: Number(e.target.value) })}
             className="rounded border border-border bg-surface px-1 py-0.5 text-[11px] outline-none cursor-pointer"
           >
-            {TIER_OPTIONS.map((t) => (
+            {tierOptionsFor(sel.items).map((t) => (
               <option key={t} value={t}>
                 T{t}
               </option>
@@ -207,9 +237,13 @@ function PickerField({
 export function SlotPicker({
   onAdd,
   prefill,
+  editing = false,
+  onCancelEdit,
 }: {
   onAdd: (line: string) => void;
   prefill?: PickerPrefill | null;
+  editing?: boolean;
+  onCancelEdit?: () => void;
 }) {
   const [sels, setSels] = useState<Record<CatalogCategory, Sel>>(emptySels);
 
@@ -219,15 +253,20 @@ export function SlotPicker({
     if (!prefill) return;
     const next = emptySels();
     const addPart = (part: string) => {
-      // "8.1"->T9, "8.2"->T10, "8.3"->T11; "T9"-"T12" přímo; jinak T4-T8
+      // "N.M" (N=4-8, i libovolný strop, ne jen T8) -> T(8+M) interně;
+      // "T9"-"T12" přímo; jinak T4-T8 z prostého zápisu.
       let tier = 8;
-      let m = part.match(/\b8\.([1-4])\b/);
-      if (m) tier = 8 + Number(m[1]);
+      let m = part.match(/\b([4-8])\.([1-4])\+?\b/);
+      if (m) tier = 8 + Number(m[2]);
       else if ((m = part.match(/\bT(9|1[0-2])\b/i))) tier = Number(m[1]);
       else if ((m = part.match(/\b(?:T)?([4-8])(?:\.[1-4])?\+?\b/i)))
         tier = Number(m[1]);
       tier = Math.max(6, Math.min(11, tier));
       for (const seg of part.split("/").map((s) => s.trim()).filter(Boolean)) {
+        if (/^caller$/i.test(seg)) {
+          if (next.weapon.items.length === 0) next.weapon = { items: [CALLER_ITEM], tier: 8 };
+          continue;
+        }
         const hit = findCatalogItem(seg);
         if (!hit) continue;
         const box = next[hit.cat];
@@ -236,7 +275,10 @@ export function SlotPicker({
           !box.items.some((x) => x.id === hit.item.id)
         ) {
           box.items.push(hit.item);
-          box.tier = tier; // T9+ = enchant, iconOf si tier na T8@e přepočte
+          // T9+ = enchant, iconOf si tier na maxTier@e přepočte; ale zaklapnout
+          // na reálně nabízenou možnost (item s nižším stropem než T8 T8 samo nemá).
+          const options = tierOptionsFor(box.items);
+          box.tier = options.includes(tier) ? tier : options[0];
         }
       }
     };
@@ -248,8 +290,16 @@ export function SlotPicker({
     setSels(next);
   }, [prefill]);
 
-  const nameOf = (s: Sel) =>
-    `${s.items.map((i) => i.name).join("/")} T${s.tier}`;
+  const nameOf = (s: Sel) => {
+    if (s.items.length === 1 && s.items[0].id === "CALLER") return "CALLER";
+    const names = s.items.map((i) => i.name).join("/");
+    const maxTier = Math.min(...s.items.map((i) => i.maxTier));
+    // Item bez reálné T8 verze (typicky jídlo, např. Avalonian Pork Omelette
+    // končí na T7): piš to jako "7.1+" — přesně notace z guild sheetu — místo
+    // zavádějícího "T9" (to by naznačovalo T8 základ, který ten kus nemá).
+    if (s.tier > 8 && maxTier < 8) return `${names} ${maxTier}.${s.tier - 8}+`;
+    return `${names} T${s.tier}`;
+  };
 
   const buildLine = (): string => {
     if (sels.weapon.items.length === 0) return "";
@@ -267,6 +317,11 @@ export function SlotPicker({
 
   return (
     <div className="mt-2 rounded-lg border border-border bg-background/40 p-2">
+      {editing && (
+        <div className="mb-1.5 rounded border border-accent/40 bg-accent/10 px-2 py-1 text-[11px] text-accent">
+          ✎ Upravuješ existující řádek — „Uložit změny" ho nahradí, nepřidá nový.
+        </div>
+      )}
       <div className="grid gap-1.5">
         {FIELDS.map(({ cat, label }) => (
           <PickerField
@@ -282,14 +337,25 @@ export function SlotPicker({
         <span className="truncate text-[11px] text-muted">
           {hasWeapon ? buildLine() : "vyber aspoň zbraň"}
         </span>
-        <button
-          type="button"
-          disabled={!hasWeapon}
-          onClick={() => hasWeapon && onAdd(buildLine())}
-          className="shrink-0 rounded bg-accent px-3 py-1 text-xs font-medium text-background hover:bg-accent-hover cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          ➕ Přidat řádek
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {editing && (
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="text-[11px] text-muted hover:text-red-400 cursor-pointer"
+            >
+              zrušit úpravu
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={!hasWeapon}
+            onClick={() => hasWeapon && onAdd(buildLine())}
+            className="rounded bg-accent px-3 py-1 text-xs font-medium text-background hover:bg-accent-hover cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {editing ? "💾 Uložit změny" : "➕ Přidat řádek"}
+          </button>
+        </div>
       </div>
     </div>
   );

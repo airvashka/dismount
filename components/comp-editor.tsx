@@ -54,6 +54,7 @@ export function CompEditor({
   );
   const [pickerOpen, setPickerOpen] = useState<number | null>(null);
   const [prefill, setPrefill] = useState<PickerPrefill | null>(null);
+  const [editingSlot, setEditingSlot] = useState<{ section: number; index: number } | null>(null);
 
   const update = (i: number, patch: Partial<Section>) =>
     setSections((s) => s.map((sec, si) => (si === i ? { ...sec, ...patch } : sec)));
@@ -78,6 +79,28 @@ export function CompEditor({
             if (seen === slotIndex) return false;
           }
           return true;
+        });
+        return { ...sec, text: lines.join("\n") };
+      })
+    );
+
+  /** Nahradí n-tý slot řádek dané party (uložení editace přes picker). */
+  const replaceSlotAt = (secIndex: number, slotIndex: number, newLine: string) =>
+    setSections((s) =>
+      s.map((sec, si) => {
+        if (si !== secIndex) return sec;
+        let seen = -1;
+        const lines = sec.text.split("\n").map((line) => {
+          const t = line.trim();
+          const isSlot =
+            t.length > 0 &&
+            !t.startsWith("#") &&
+            Boolean(t.split(/\t|\|/)[0]?.trim());
+          if (isSlot) {
+            seen++;
+            if (seen === slotIndex) return newLine;
+          }
+          return line;
         });
         return { ...sec, text: lines.join("\n") };
       })
@@ -151,7 +174,11 @@ export function CompEditor({
 
             <button
               type="button"
-              onClick={() => setPickerOpen((p) => (p === i ? null : i))}
+              onClick={() => {
+                setPickerOpen((p) => (p === i ? null : i));
+                setEditingSlot(null);
+                setPrefill(null);
+              }}
               className={
                 "mt-2 inline-flex items-center gap-1.5 rounded border px-3 py-1 text-xs font-medium cursor-pointer transition-colors " +
                 (pickerOpen === i
@@ -164,9 +191,20 @@ export function CompEditor({
             {pickerOpen === i && (
               <SlotPicker
                 prefill={prefill}
-                onAdd={(line) =>
-                  update(i, { text: sec.text.trim() ? sec.text.trimEnd() + "\n" + line : line })
-                }
+                editing={editingSlot?.section === i}
+                onCancelEdit={() => {
+                  setEditingSlot(null);
+                  setPrefill(null);
+                }}
+                onAdd={(line) => {
+                  if (editingSlot && editingSlot.section === i) {
+                    replaceSlotAt(i, editingSlot.index, line);
+                    setEditingSlot(null);
+                    setPrefill(null);
+                  } else {
+                    update(i, { text: sec.text.trim() ? sec.text.trimEnd() + "\n" + line : line });
+                  }
+                }}
               />
             )}
 
@@ -197,6 +235,7 @@ export function CompEditor({
                             build: s.build,
                             note: s.note,
                           });
+                          setEditingSlot({ section: i, index: si });
                         }}
                         title="Načíst tento řádek do pickeru"
                         className="ml-auto shrink-0 text-muted hover:text-accent cursor-pointer"
