@@ -65,8 +65,10 @@ export async function signUpAction(formData: FormData) {
 
   const eventId = Number(formData.get("event_id"));
   guardUnlocked(eventId);
+  // Přímé přiřazení na konkrétní slot (slot_id) smí jen caller+ — běžný člen
+  // se může jen přihlásit s nabídkou rolí, na pozici ho zařadí caller.
   const slotIdRaw = formData.get("slot_id");
-  const slotId = slotIdRaw ? Number(slotIdRaw) : null;
+  const slotId = slotIdRaw && atLeast(user.webRole, CAN_CREATE) ? Number(slotIdRaw) : null;
   const note = String(formData.get("note") ?? "").trim().slice(0, 200);
 
   // Nabídnuté role: checkboxy "offer" (+ případný "fill" = zahraju cokoliv)

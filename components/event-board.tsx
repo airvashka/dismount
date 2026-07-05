@@ -333,7 +333,7 @@ export function EventBoard({
                               )}
                             </td>
                             <td className="px-2 py-1 text-right">
-                              {!taken && canSignup && !isMine && (
+                              {!taken && isCaller && !isMine && (
                                 <form
                                   action={signUpAction}
                                   className="inline sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
