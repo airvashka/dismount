@@ -12,7 +12,14 @@ const RENDER = "/api/icon";
 // Katalog všech itemů (generuje scripts/build-item-catalog.mjs z ao-bin-dumps):
 // přesný název (EN) -> ID rodiny bez tieru. První instance rozpoznávání —
 // pokryje vše, co vybere picker; guild slang řeší regexy níž.
-export type CatalogItem = { id: string; name: string; maxTier: number };
+export type CatalogItem = {
+  id: string;
+  name: string;
+  maxTier: number;
+  /** Nemá T-tier progrese (Season battlemounty, jednorázový skin) — render
+   * se volá s `id` tak jak je, žádné "T{n}_" doplňování ani enchant tečky. */
+  special?: boolean;
+};
 export type CatalogCategory =
   | "weapon"
   | "offhand"
@@ -24,10 +31,32 @@ export type CatalogCategory =
   | "mount";
 export const ITEM_CATALOG = catalog as Record<CatalogCategory, CatalogItem[]>;
 
+// Prestižní battlemounty ze Season reward tracku — vzácnost Bronze/Silver/
+// Gold/Crystal místo T-tieru, chybí v ao-bin-dumps pod běžným "T#_" prefixem
+// (jsou "UNIQUE_..."), takže je generický parser v build-item-catalog.mjs
+// nikdy nenajde. Bereme Gold jako reprezentativní vzhled. Command Mammoth
+// existuje jen jako jediný "@1" skin (žádná plain T8 verze), řešíme stejně.
+// Ověřeno proti wiki.albiononline.com/wiki/Category:Battle_Mount.
+export const SPECIAL_MOUNTS: CatalogItem[] = [
+  { id: "UNIQUE_MOUNT_ENT_GOLD", name: "Ancient Ent", maxTier: 8, special: true },
+  { id: "UNIQUE_MOUNT_ARMORED_EAGLE_GOLD", name: "Battle Eagle", maxTier: 8, special: true },
+  { id: "UNIQUE_MOUNT_RHINO_SEASON_GOLD", name: "Battle Rhino", maxTier: 8, special: true },
+  { id: "UNIQUE_MOUNT_BEHEMOTH_GOLD", name: "Behemoth", maxTier: 8, special: true },
+  { id: "UNIQUE_MOUNT_BEETLE_GOLD", name: "Colossus Beetle", maxTier: 8, special: true },
+  { id: "T8_MOUNT_MAMMOTH_BATTLE@1", name: "Command Mammoth", maxTier: 8, special: true },
+  { id: "UNIQUE_MOUNT_BATTLESPIDER_GOLD", name: "Goliath Horseeater", maxTier: 8, special: true },
+  { id: "UNIQUE_MOUNT_JUGGERNAUT_GOLD", name: "Juggernaut", maxTier: 8, special: true },
+  { id: "UNIQUE_MOUNT_TANKBEETLE_GOLD", name: "Phalanx Beetle", maxTier: 8, special: true },
+  { id: "UNIQUE_MOUNT_BASTION_GOLD", name: "Roving Bastion", maxTier: 8, special: true },
+  { id: "UNIQUE_MOUNT_TOWER_CHARIOT_GOLD", name: "Tower Chariot", maxTier: 8, special: true },
+];
+const SPECIAL_IDS = new Set(SPECIAL_MOUNTS.map((m) => m.id));
+
 const NAME_TO_ID = new Map<string, string>();
 for (const list of Object.values(ITEM_CATALOG)) {
   for (const it of list) NAME_TO_ID.set(it.name.toLowerCase(), it.id);
 }
+for (const it of SPECIAL_MOUNTS) NAME_TO_ID.set(it.name.toLowerCase(), it.id);
 
 function cleanPartName(part: string): string {
   return part
@@ -240,6 +269,7 @@ for (const [cat, list] of Object.entries(ITEM_CATALOG)) {
     ID_TO_ENTRY.set(item.id, { cat: cat as CatalogCategory, item });
   }
 }
+for (const item of SPECIAL_MOUNTS) ID_TO_ENTRY.set(item.id, { cat: "mount", item });
 
 /**
  * Reverzní vyhledání: z textu ("Hellion hood T7+", "Hmace T7", "Galatine Pair T8")
@@ -291,7 +321,10 @@ function resolveNameIcon(
   regexes: Array<[RegExp, string]>
 ): string | null {
   const id = NAME_TO_ID.get(cleanPartName(name).toLowerCase());
-  if (id) return iconUrl(`T${te.tier}_${id}`, te);
+  if (id) {
+    if (SPECIAL_IDS.has(id)) return `${RENDER}/${id}.png?quality=4&size=64`;
+    return iconUrl(`T${te.tier}_${id}`, te);
+  }
   for (const [re, item] of regexes) {
     if (re.test(name)) return iconUrl(item, te);
   }

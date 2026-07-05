@@ -11,6 +11,7 @@ import {
   findCatalogItem,
   roleClass,
   CALLER_ICON,
+  SPECIAL_MOUNTS,
   type CatalogCategory,
   type CatalogItem,
 } from "@/lib/albion";
@@ -67,6 +68,7 @@ function tierOptionsFor(items: CatalogItem[]): number[] {
 
 const iconOf = (item: CatalogItem, tier: number) => {
   if (item.id === "CALLER") return CALLER_ICON;
+  if (item.special) return `${RENDER}/${item.id}.png?quality=4&size=64`;
   const ench = tier > 8 ? Math.min(4, tier - 8) : 0;
   const base = Math.min(8, tier, item.maxTier);
   return `${RENDER}/T${base}_${item.id}${ench ? `@${ench}` : ""}.png?quality=4&size=64`;
@@ -94,6 +96,9 @@ function PickerField({
     // CALLER je jen u zbraní, mimo filtr rolí (není to skutečná zbraň) —
     // respektuje jen fulltext hledání.
     ...(cat === "weapon" && matchesQuery(CALLER_ITEM.name) ? [CALLER_ITEM] : []),
+    // Prestižní Season battlemounty (Behemoth, Juggernaut, Ballista...) —
+    // nejsou v generovaném katalogu (jiná struktura dat), doplněné ručně.
+    ...(cat === "mount" ? SPECIAL_MOUNTS.filter((m) => matchesQuery(m.name)) : []),
     ...ITEM_CATALOG[cat].filter(
       (it) =>
         matchesQuery(it.name) &&
@@ -293,6 +298,11 @@ export function SlotPicker({
 
   const nameOf = (s: Sel) => {
     if (s.items.length === 1 && s.items[0].id === "CALLER") return "CALLER";
+    // Speciální battlemounty nemají T-tier progresi — psát "Behemoth T8" by
+    // bylo zavádějící, stačí holé jméno.
+    if (s.items.length > 0 && s.items.every((i) => i.special)) {
+      return s.items.map((i) => i.name).join("/");
+    }
     const names = s.items.map((i) => i.name).join("/");
     const maxTier = Math.min(...s.items.map((i) => i.maxTier));
     // Item bez reálné T8 verze (typicky jídlo, např. Avalonian Pork Omelette
