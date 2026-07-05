@@ -345,6 +345,7 @@ export function EventBoard({
                                   }
                                   title={isCaller ? "Přetáhni na jiný slot nebo do „K rozřazení“" : undefined}
                                   className={
+                                    "whitespace-nowrap " +
                                     (isMine ? "text-accent " : "text-red-300 ") +
                                     (isCaller
                                       ? "inline-flex items-center gap-1.5 rounded border border-border bg-surface px-2 py-0.5 cursor-grab active:cursor-grabbing hover:border-accent transition-colors "
@@ -361,23 +362,6 @@ export function EventBoard({
                                 </span>
                               ) : (
                                 <span className="text-emerald-400">volný</span>
-                              )}
-                            </td>
-                            <td className="px-2 py-1 text-right">
-                              {!taken && isCaller && !isMine && (
-                                <form
-                                  action={signUpAction}
-                                  className="inline sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                                >
-                                  <input type="hidden" name="event_id" value={eventId} />
-                                  <input type="hidden" name="slot_id" value={slot.id} />
-                                  <button
-                                    type="submit"
-                                    className="rounded border border-accent px-2 py-0.5 text-xs text-accent hover:bg-accent hover:text-background cursor-pointer whitespace-nowrap"
-                                  >
-                                    {mySignup ? "přesunout se sem" : "zabrat"}
-                                  </button>
-                                </form>
                               )}
                             </td>
                           </tr>
@@ -503,12 +487,10 @@ export function EventBoard({
                 : undefined
             }
             className={
-              "rounded-lg p-2 -m-2 transition-colors " +
-              (dragged?.slot_id != null
-                ? hoverPanel
-                  ? "border-2 border-dashed border-accent bg-accent/10"
-                  : "border-2 border-dashed border-border"
-                : "border-2 border-transparent")
+              "rounded-lg border-2 border-dashed p-2 -m-2 transition-colors " +
+              (dragged?.slot_id != null && hoverPanel
+                ? "border-accent bg-accent/10"
+                : "border-border")
             }
           >
             <h2 className="text-sm font-semibold">
