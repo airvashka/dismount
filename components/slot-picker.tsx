@@ -175,10 +175,12 @@ function PickerField({
                       : "hover:bg-accent/10")
                   }
                 >
+                  {/* grid vždy base ikonu (bez enchant variant) — je předehřátá v cache */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={iconOf(it, sel.tier)}
-                    alt={it.name}
+                    src={iconOf(it, Math.min(8, it.maxTier))}
+                    alt=""
+                    title={it.name}
                     width={36}
                     height={36}
                     loading="lazy"

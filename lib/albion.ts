@@ -318,6 +318,52 @@ export type GuildStats = {
   founded: string; // ISO datum
 };
 
+export type GuildKill = {
+  killer: string;
+  victim: string;
+  victimGuild: string;
+  fame: number;
+  time: string;
+};
+
+/** Top killy guildy za posledních N hodin (podle fame); null = API nedostupné. */
+export async function fetchTopKills(
+  hours = 24,
+  top = 5
+): Promise<GuildKill[] | null> {
+  try {
+    const res = await fetch(
+      `https://gameinfo-ams.albiononline.com/api/gameinfo/events?guildId=${GAMEINFO_GUILD_ID}&limit=51`,
+      { next: { revalidate: 900 }, signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) return null;
+    const events = (await res.json()) as Array<{
+      TimeStamp: string;
+      TotalVictimKillFame: number;
+      Killer?: { Name?: string; GuildId?: string };
+      Victim?: { Name?: string; GuildName?: string };
+    }>;
+    const cutoff = Date.now() - hours * 3600_000;
+    return events
+      .filter(
+        (e) =>
+          e.Killer?.GuildId === GAMEINFO_GUILD_ID &&
+          new Date(e.TimeStamp).getTime() > cutoff
+      )
+      .map((e) => ({
+        killer: e.Killer?.Name ?? "?",
+        victim: e.Victim?.Name ?? "?",
+        victimGuild: e.Victim?.GuildName ?? "",
+        fame: Number(e.TotalVictimKillFame ?? 0),
+        time: e.TimeStamp,
+      }))
+      .sort((a, b) => b.fame - a.fame)
+      .slice(0, top);
+  } catch {
+    return null;
+  }
+}
+
 /** Statistiky guildy z killboardu; null když API zrovna neodpovídá. */
 export async function fetchGuildStats(): Promise<GuildStats | null> {
   try {

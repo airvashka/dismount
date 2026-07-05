@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { fetchGuildStats } from "@/lib/albion";
+import { fetchGuildStats, fetchTopKills } from "@/lib/albion";
 
 const DISCORD_INVITE = "https://discord.gg/RqjY3Mgkj";
 
@@ -20,12 +20,13 @@ const ARSENAL = [
 
 function fmtFame(n: number): string {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1).replace(".", ",")} mld`;
-  if (n >= 1_000_000) return `${Math.round(n / 1_000_000)} mil`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")} mil`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}k`;
   return new Intl.NumberFormat("cs-CZ").format(n);
 }
 
 export default async function Home() {
-  const stats = await fetchGuildStats();
+  const [stats, kills] = await Promise.all([fetchGuildStats(), fetchTopKills()]);
 
   return (
     <div>
@@ -103,6 +104,38 @@ export default async function Home() {
           </div>
 
         </div>
+
+        {/* Top killy za 24 h (killboard) */}
+        {kills && kills.length > 0 && (
+          <div className="relative mx-auto max-w-xl px-4 pb-12">
+            <h2 className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+              ⚔ Top killy za posledních 24 hodin
+            </h2>
+            <ol className="mt-4 space-y-1.5">
+              {kills.map((k, i) => (
+                <li
+                  key={`${k.killer}-${k.time}`}
+                  className="flex items-center gap-3 rounded-lg border border-border bg-surface/70 px-4 py-2 text-sm"
+                >
+                  <span className="w-5 text-right font-bold text-accent">
+                    {i + 1}.
+                  </span>
+                  <span className="font-semibold text-accent">{k.killer}</span>
+                  <span className="text-muted">⚔</span>
+                  <span className="text-red-300">
+                    {k.victim}
+                    {k.victimGuild && (
+                      <span className="text-muted"> [{k.victimGuild}]</span>
+                    )}
+                  </span>
+                  <span className="ml-auto font-mono text-xs text-emerald-400">
+                    {fmtFame(k.fame)} fame
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
 
         {/* Zbrojnice */}
         <div className="relative mx-auto max-w-3xl px-4 pb-16">

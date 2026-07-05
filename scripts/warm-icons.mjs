@@ -8,7 +8,7 @@ const catalog = JSON.parse(fs.readFileSync("lib/item-catalog.json", "utf8"));
 const DIR = "data/icons";
 fs.mkdirSync(DIR, { recursive: true });
 
-const jobs = [];
+const jobs = []; // [id, size]
 for (const [cat, list] of Object.entries(catalog)) {
   for (const it of list) {
     // jídla existují typicky jen ve svém maxTieru; gear hřejeme i v T7
@@ -16,7 +16,9 @@ for (const [cat, list] of Object.entries(catalog)) {
       cat === "food"
         ? [it.maxTier]
         : new Set([Math.min(7, it.maxTier), it.maxTier]);
-    for (const t of tiers) jobs.push(`T${t}_${it.id}`);
+    for (const t of tiers) jobs.push([`T${t}_${it.id}`, 64]);
+    // hover zvětšenina (size 217) — jen maxTier
+    jobs.push([`T${it.maxTier}_${it.id}`, 217]);
   }
 }
 console.log(`ikon k předehřátí: ${jobs.length}`);
@@ -26,15 +28,15 @@ let cached = 0;
 let fail = 0;
 const workers = Array.from({ length: 6 }, async () => {
   while (jobs.length > 0) {
-    const id = jobs.pop();
-    const file = `${DIR}/${id}_s64.png`;
+    const [id, size] = jobs.pop();
+    const file = `${DIR}/${id}_s${size}.png`;
     if (fs.existsSync(file)) {
       cached++;
       continue;
     }
     try {
       const res = await fetch(
-        `https://render.albiononline.com/v1/item/${id}.png?quality=4&size=64`,
+        `https://render.albiononline.com/v1/item/${id}.png?quality=4&size=${size}`,
         { signal: AbortSignal.timeout(10000) }
       );
       if (res.ok) {
