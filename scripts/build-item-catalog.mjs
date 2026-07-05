@@ -47,6 +47,9 @@ const CATS = {
     /^CAPE/.test(id) &&
     !/CAPE_ARENA|CAPE_(CLOTH|LEATHER|PLATE)_|_BP$/.test(id),
   food: (id) => /^MEAL_/.test(id),
+  // MOUNT_ = jízdní zvířata (battlemounty i transportní); MOUNTUPGRADE_
+  // (sedla/doplňky) záměrně mimo, to nejsou mounty samotné.
+  mount: (id) => /^MOUNT_/.test(id),
 };
 
 const catalog = Object.fromEntries(Object.keys(CATS).map((k) => [k, []]));

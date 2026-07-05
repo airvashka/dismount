@@ -29,6 +29,7 @@ const FIELDS: Array<{ cat: CatalogCategory; label: string }> = [
   { cat: "shoes", label: "Boty" },
   { cat: "cape", label: "Capa" },
   { cat: "food", label: "Jídlo" },
+  { cat: "mount", label: "Mount" },
 ];
 
 type Sel = { items: CatalogItem[]; tier: number };
@@ -304,7 +305,7 @@ export function SlotPicker({
   const buildLine = (): string => {
     if (sels.weapon.items.length === 0) return "";
     const role = nameOf(sels.weapon);
-    const gear = (["offhand", "head", "chest", "shoes", "cape"] as const)
+    const gear = (["offhand", "head", "chest", "shoes", "cape", "mount"] as const)
       .map((c) => sels[c])
       .filter((s) => s.items.length > 0)
       .map(nameOf)

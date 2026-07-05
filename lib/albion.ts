@@ -20,7 +20,8 @@ export type CatalogCategory =
   | "chest"
   | "shoes"
   | "cape"
-  | "food";
+  | "food"
+  | "mount";
 export const ITEM_CATALOG = catalog as Record<CatalogCategory, CatalogItem[]>;
 
 const NAME_TO_ID = new Map<string, string>();
@@ -35,14 +36,6 @@ function cleanPartName(part: string): string {
     .replace(/\b[1-8]\.\d\+?\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-}
-
-/** Přesná shoda názvu itemu z katalogu (po odstranění tierů/závorek). */
-function catalogIconUrl(part: string): string | null {
-  const id = NAME_TO_ID.get(cleanPartName(part).toLowerCase());
-  if (!id) return null;
-  const te = tierEnchFromText(part) ?? { tier: 8, ench: 0 };
-  return iconUrl(`T${te.tier}_${id}`, te);
 }
 
 const ROLE_ICONS: Array<[RegExp, string]> = [
@@ -291,23 +284,15 @@ export function slotRoleClass(roleName: string): string | null {
 // build/gear má u sebe napsaný). Vlastní lokální ikona, ne z render API.
 export const CALLER_ICON = "/icons/caller-crown.svg";
 
-/** URL ikony pro slot podle názvu role (+ případně buildu). */
-export function slotIconUrl(roleName: string, build = ""): string | null {
-  if (/^caller$/i.test(roleName.trim())) return CALLER_ICON;
-  const exact = catalogIconUrl(roleName);
-  if (exact) return exact;
-  const haystack = `${roleName} ${build}`;
-  for (const [re, item] of ROLE_ICONS) {
-    if (re.test(haystack)) return iconUrl(item, tierEnchFromText(roleName));
-  }
-  return null;
-}
-
 /** Jedno jméno (bez tieru) -> URL ikony se zadaným (sdíleným) tierem/enchantem. */
-function resolveVariantIcon(name: string, te: TierEnch): string | null {
+function resolveNameIcon(
+  name: string,
+  te: TierEnch,
+  regexes: Array<[RegExp, string]>
+): string | null {
   const id = NAME_TO_ID.get(cleanPartName(name).toLowerCase());
   if (id) return iconUrl(`T${te.tier}_${id}`, te);
-  for (const [re, item] of GEAR_ICONS) {
+  for (const [re, item] of regexes) {
     if (re.test(name)) return iconUrl(item, te);
   }
   return null;
@@ -322,12 +307,30 @@ function resolveVariantIcon(name: string, te: TierEnch): string | null {
 export function gearIconUrls(part: string): string[] {
   const te = tierEnchFromText(part) ?? { tier: 8, ench: 0 };
   const names = part.split("/").map((s) => s.trim()).filter(Boolean);
-  const urls: string[] = [];
-  for (const name of names) {
-    const url = resolveVariantIcon(name, te);
-    if (url) urls.push(url);
+  return names
+    .map((n) => resolveNameIcon(n, te, GEAR_ICONS))
+    .filter((u): u is string => Boolean(u));
+}
+
+/**
+ * URL ikon pro slot (roli/zbraň) — podporuje až 3 varianty oddělené „/"
+ * (např. "Great Hammer/Mace T7"), vrátí ikonu pro KAŽDOU rozpoznanou
+ * variantu. Fallback na starší best-effort hledání v "role + build" pro
+ * nejasné zápisy, kde samotné jméno role nic nenajde.
+ */
+export function slotIconUrls(roleName: string, build = ""): string[] {
+  if (/^caller$/i.test(roleName.trim())) return [CALLER_ICON];
+  const te = tierEnchFromText(roleName) ?? { tier: 8, ench: 0 };
+  const names = roleName.split("/").map((s) => s.trim()).filter(Boolean);
+  const urls = names
+    .map((n) => resolveNameIcon(n, te, ROLE_ICONS))
+    .filter((u): u is string => Boolean(u));
+  if (urls.length > 0) return urls;
+  const haystack = `${roleName} ${build}`;
+  for (const [re, item] of ROLE_ICONS) {
+    if (re.test(haystack)) return [iconUrl(item, tierEnchFromText(roleName))];
   }
-  return urls;
+  return [];
 }
 
 // --- Oficiální gameinfo API (Europe server) — statistiky guildy ---

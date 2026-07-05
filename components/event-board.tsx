@@ -8,7 +8,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { PARTY_MAX, parseOffers } from "@/lib/comp-format";
-import { slotIconUrl } from "@/lib/albion";
+import { slotIconUrls } from "@/lib/albion";
 import { GearChips } from "@/components/gear-chips";
 import { ItemIcon } from "@/components/item-icon";
 import {
@@ -61,7 +61,7 @@ function OfferChips({
         }
         order++;
         const slot = slots.find((s) => s.role_name === o);
-        const icon = slotIconUrl(o, slot?.build ?? "");
+        const icons = slotIconUrls(o, slot?.build ?? "");
         return (
           <span
             key={o}
@@ -69,7 +69,9 @@ function OfferChips({
             className="inline-flex items-center gap-0.5 text-[11px] text-muted"
           >
             <span className="font-semibold text-accent">{order}.</span>
-            {icon ? <ItemIcon src={icon} size={size} /> : <span>{o}</span>}
+            {icons.length > 0
+              ? icons.map((u, i) => <ItemIcon key={i} src={u} size={size} />)
+              : <span>{o}</span>}
           </span>
         );
       })}
@@ -183,12 +185,9 @@ export function EventBoard({
           <div className="flex items-center gap-3">
             {mySlot ? (
               <>
-                {slotIconUrl(mySlot.role_name, mySlot.build) && (
-                  <ItemIcon
-                    src={slotIconUrl(mySlot.role_name, mySlot.build)!}
-                    size={44}
-                  />
-                )}
+                {slotIconUrls(mySlot.role_name, mySlot.build).map((u, i) => (
+                  <ItemIcon key={i} src={u} size={44} />
+                ))}
                 <div>
                   <div className="font-semibold text-emerald-400">
                     ✔ Jdeš: {mySlot.role_name}
@@ -275,7 +274,7 @@ export function EventBoard({
                       {group.slots.map((slot) => {
                         const taken = bySlot.get(slot.id);
                         const isMine = taken?.discord_id === discordId;
-                        const icon = slotIconUrl(slot.role_name, slot.build);
+                        const icons = slotIconUrls(slot.role_name, slot.build);
                         const droppable = isCaller && dragged;
                         const matched = slotMatchesDragged(slot);
                         // Při tažení: sedící sloty výrazně svítí, ostatní se ztlumí
@@ -312,15 +311,18 @@ export function EventBoard({
                               }
                             >
                               <span className="flex items-center gap-1.5">
-                                {icon && <ItemIcon src={icon} size={26} />}
+                                {icons.map((u, i) => (
+                                  <ItemIcon key={i} src={u} size={29} />
+                                ))}
                                 <span className="whitespace-nowrap">{slot.role_name}</span>
                               </span>
                             </td>
                             <td className="px-2 py-1 text-muted">
                               <GearChips
                                 text={[slot.build, slot.note].filter(Boolean).join(", ")}
-                                size={16}
+                                size={26}
                                 nowrap
+                                iconOnly
                               />
                             </td>
                             <td className="px-2 py-1">
@@ -424,7 +426,7 @@ export function EventBoard({
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {distinctRoles.map((role) => {
                   const idx = pickedRoles.indexOf(role);
-                  const icon = slotIconUrl(role, "");
+                  const icons = slotIconUrls(role, "");
                   return (
                     <button
                       key={role}
@@ -442,7 +444,9 @@ export function EventBoard({
                           {idx + 1}.
                         </span>
                       )}
-                      {icon && <ItemIcon src={icon} size={16} />}
+                      {icons.map((u, i) => (
+                        <ItemIcon key={i} src={u} size={16} />
+                      ))}
                       {role}
                     </button>
                   );
@@ -463,12 +467,6 @@ export function EventBoard({
                 </div>
               )}
 
-              <input
-                name="note"
-                placeholder="poznámka (spec, gear…)"
-                maxLength={200}
-                className="mt-2 w-full rounded border border-border bg-background px-2 py-1 text-xs outline-none focus:border-accent"
-              />
               <button
                 type="submit"
                 disabled={pickedRoles.length === 0 && !fill}

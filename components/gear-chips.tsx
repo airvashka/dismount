@@ -8,10 +8,13 @@ export function GearChips({
   text,
   size = 26,
   nowrap = false,
+  iconOnly = false,
 }: {
   text: string;
   size?: number;
   nowrap?: boolean;
+  /** Bez textu vedle ikon — jméno se ukáže jen jako hover tooltip (title). */
+  iconOnly?: boolean;
 }) {
   const parts = text
     .split(",")
@@ -30,11 +33,15 @@ export function GearChips({
       {parts.map((part, i) => {
         const urls = gearIconUrls(part);
         return (
-          <span key={i} className="inline-flex items-center gap-1 whitespace-nowrap">
+          <span
+            key={i}
+            title={iconOnly ? part : undefined}
+            className="inline-flex items-center gap-1 whitespace-nowrap"
+          >
             {urls.map((url, j) => (
               <ItemIcon key={j} src={url} size={size} />
             ))}
-            {part}
+            {!iconOnly && part}
           </span>
         );
       })}

@@ -4,7 +4,7 @@ import { atLeast } from "@/lib/roles";
 import { listUpcomingEvents, listPastEvents, getMySignups } from "@/lib/events";
 import { LocalTime } from "@/components/local-time";
 import { ItemIcon } from "@/components/item-icon";
-import { slotIconUrl } from "@/lib/albion";
+import { slotIconUrls } from "@/lib/albion";
 
 export default async function AkcePage() {
   const user = await getSessionUser();
@@ -61,9 +61,9 @@ export default async function AkcePage() {
         <ul className="mt-6 space-y-4">
           {events.map((e) => {
             const mine = mySignups.get(e.id);
-            const myIcon = mine?.role_name
-              ? slotIconUrl(mine.role_name, mine.build ?? "")
-              : null;
+            const myIcons = mine?.role_name
+              ? slotIconUrls(mine.role_name, mine.build ?? "")
+              : [];
             return (
               <li key={e.id}>
                 <Link
@@ -89,7 +89,9 @@ export default async function AkcePage() {
                       (mine.role_name ? (
                         <span className="inline-flex items-center gap-1.5 rounded border border-emerald-500/60 bg-emerald-950/40 px-2 py-0.5 text-xs font-medium text-emerald-400">
                           ✔ jdeš:
-                          {myIcon && <ItemIcon src={myIcon} size={20} />}
+                          {myIcons.map((u, i) => (
+                            <ItemIcon key={i} src={u} size={20} />
+                          ))}
                           {mine.role_name}
                         </span>
                       ) : (

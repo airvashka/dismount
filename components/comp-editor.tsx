@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { parseSlotLines, PARTY_MAX } from "@/lib/comp-format";
-import { slotIconUrl } from "@/lib/albion";
+import { slotIconUrls } from "@/lib/albion";
 import { GearChips } from "@/components/gear-chips";
 import { ItemIcon } from "@/components/item-icon";
 import { SlotPicker, type PickerPrefill } from "@/components/slot-picker";
@@ -16,7 +16,7 @@ export type CompOption = { id: number; name: string; text: string };
 
 type Section = { title: string; text: string };
 
-const SECTION_PRESETS = ["Parta", "Bomba", "PVE"];
+const SECTION_PRESETS = ["Parta", "Bomba", "PVE", "Battlemounts"];
 
 function parseSections(text: string): Section[] {
   const sections: Section[] = [];
@@ -211,11 +211,11 @@ export function CompEditor({
             {slots.length > 0 && (
               <ul className="mt-2 space-y-0.5">
                 {slots.map((s, si) => {
-                  const icon = slotIconUrl(s.role_name, s.build);
+                  const icons = slotIconUrls(s.role_name, s.build);
                   return (
                     <li key={si} className="flex items-center gap-2 text-xs">
-                      {icon ? (
-                        <ItemIcon src={icon} size={24} />
+                      {icons.length > 0 ? (
+                        icons.map((u, ui) => <ItemIcon key={ui} src={u} size={24} />)
                       ) : (
                         <span className="inline-block w-6" />
                       )}
