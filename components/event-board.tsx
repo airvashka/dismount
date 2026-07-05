@@ -6,7 +6,7 @@
 // - vpravo přihláška (výběr rolí podle priority nebo FILL) a kompaktní
 //   karty čekajících, které caller přetahuje myší na sloty.
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { PARTY_MAX, parseOffers } from "@/lib/comp-format";
 import { slotIconUrl } from "@/lib/albion";
 import { GearChips } from "@/components/gear-chips";
@@ -80,7 +80,7 @@ function OfferChips({
 export function EventBoard({
   eventId,
   slots,
-  signups,
+  signups: initialSignups,
   discordId,
   canSignup,
   isCaller,
@@ -93,11 +93,40 @@ export function EventBoard({
   isCaller: boolean;
 }) {
   const [, startTransition] = useTransition();
+  const [signups, setSignups] = useState(initialSignups);
   const [dragged, setDragged] = useState<BoardSignup | null>(null);
   const [hoverSlot, setHoverSlot] = useState<number | null>(null);
   const [hoverPanel, setHoverPanel] = useState(false);
   const [pickedRoles, setPickedRoles] = useState<string[]>([]);
   const [fill, setFill] = useState(false);
+
+  // Vlastní akce (drag&drop, přihlášení, odhlášení) revalidují stránku
+  // na serveru a pošlou čerstvý prop — promítni ho hned, nečekej na polling.
+  useEffect(() => {
+    setSignups(initialSignups);
+  }, [initialSignups]);
+
+  // Živý stav bez refreshe — kdo se přihlásí/odhlásí/je přeřazen se objeví
+  // ostatním do 5 s. Během tažení se polling nezastavuje, ale je neškodný
+  // (dragged je ryze lokální stav, nová data se jen promítnou do tabulky).
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const res = await fetch(`/api/akce/${eventId}/stav`, { cache: "no-store" });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data.signups)) setSignups(data.signups);
+      } catch {
+        // dočasný výpadek sítě — zkusí se to znovu za 5 s
+      }
+    };
+    const id = setInterval(tick, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [eventId]);
 
   const bySlot = new Map(signups.filter((s) => s.slot_id).map((s) => [s.slot_id, s]));
   const waiting = signups.filter((s) => s.slot_id === null);
