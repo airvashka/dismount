@@ -5,6 +5,7 @@ import { listUpcomingEvents, listPastEvents, getMySignups } from "@/lib/events";
 import { LocalTime } from "@/components/local-time";
 import { ItemIcon } from "@/components/item-icon";
 import { slotIconUrls } from "@/lib/albion";
+import { eventPath } from "@/lib/slug";
 
 export default async function AkcePage() {
   const user = await getSessionUser();
@@ -67,7 +68,7 @@ export default async function AkcePage() {
             return (
               <li key={e.id}>
                 <Link
-                  href={`/akce/${e.id}`}
+                  href={eventPath(e.id, e.title)}
                   className="block rounded-lg border border-border bg-surface p-4 hover:border-accent transition-colors"
                 >
                   <div className="flex items-baseline justify-between">
@@ -117,7 +118,7 @@ export default async function AkcePage() {
             {past.map((e) => (
               <li key={e.id}>
                 <Link
-                  href={`/akce/${e.id}`}
+                  href={eventPath(e.id, e.title)}
                   className="block rounded-lg border border-border bg-surface/50 p-3 opacity-70 hover:opacity-100 transition-opacity"
                 >
                   <div className="flex items-baseline justify-between">

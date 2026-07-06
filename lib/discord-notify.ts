@@ -4,6 +4,7 @@
 
 import { sendChannelMessage } from "./discord";
 import type { EventRow } from "./events";
+import { eventPath } from "./slug";
 
 const CHANNEL_ID = process.env.DISCORD_CTA_CHANNEL_ID ?? "";
 const SITE_URL = (process.env.AUTH_URL ?? "https://dismount.team").replace(/\/$/, "");
@@ -18,7 +19,7 @@ function toUnix(startsAt: string): number {
 export async function announceEvent(event: EventRow): Promise<string | null> {
   if (!CHANNEL_ID) return null;
   const unix = toUnix(event.starts_at);
-  const url = `${SITE_URL}/akce/${event.id}`;
+  const url = `${SITE_URL}${eventPath(event.id, event.title)}`;
   return sendChannelMessage(CHANNEL_ID, {
     embeds: [
       {
@@ -39,7 +40,7 @@ export async function announceEvent(event: EventRow): Promise<string | null> {
 export async function remindEvent(event: EventRow): Promise<string | null> {
   if (!CHANNEL_ID) return null;
   const unix = toUnix(event.starts_at);
-  const url = `${SITE_URL}/akce/${event.id}`;
+  const url = `${SITE_URL}${eventPath(event.id, event.title)}`;
   // Prostý content nerozumí markdown odkazům [text](url) (na rozdíl od
   // embedu) — proto holá URL, Discord ji sám polinkuje.
   return sendChannelMessage(CHANNEL_ID, {

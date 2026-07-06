@@ -7,6 +7,7 @@ import { listTemplates, getTemplateText } from "@/lib/comps";
 import { updateEventAction } from "../../actions";
 import { CompEditor } from "@/components/comp-editor";
 import { slotsToText } from "@/lib/comp-format";
+import { eventPath } from "@/lib/slug";
 
 const EVENT_TYPES = ["CTA", "ZvZ", "Ava Raid", "Hellgates", "Fame farm", "Jiné"];
 
@@ -28,7 +29,7 @@ export default async function UpravitAkciPage({
   }
 
   const { id } = await params;
-  const event = getEvent(Number(id));
+  const event = getEvent(parseInt(id, 10));
   if (!event) notFound();
   const locked = isLocked(event);
 
@@ -47,7 +48,7 @@ export default async function UpravitAkciPage({
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Upravit akci</h1>
         <Link
-          href={`/akce/${event.id}`}
+          href={eventPath(event.id, event.title)}
           className="text-sm text-muted hover:text-foreground"
         >
           ← zpět na akci

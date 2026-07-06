@@ -7,6 +7,7 @@ import { LocalTime } from "@/components/local-time";
 import { deleteEventAction } from "../actions";
 import { ConfirmForm } from "@/components/confirm-form";
 import { EventBoard } from "@/components/event-board";
+import { eventPath } from "@/lib/slug";
 
 export default async function AkceDetailPage({
   params,
@@ -26,7 +27,9 @@ export default async function AkceDetailPage({
 
   const { id } = await params;
   const { chyba } = await searchParams;
-  const event = getEvent(Number(id));
+  // Vedoucí číslice jsou autoritativní ID, zbytek (slug) je jen pro
+  // čitelnost URL — parseInt ho ignoruje.
+  const event = getEvent(parseInt(id, 10));
   if (!event) notFound();
 
   const slots = getSlots(event.id);
@@ -53,7 +56,7 @@ export default async function AkceDetailPage({
         <div className="flex shrink-0 items-center gap-2">
           {canEdit && (
             <Link
-              href={`/akce/${event.id}/upravit`}
+              href={`${eventPath(event.id, event.title)}/upravit`}
               className="rounded border border-border px-3 py-1 text-xs text-muted hover:border-accent hover:text-accent"
             >
               Upravit
