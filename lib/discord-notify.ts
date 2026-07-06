@@ -6,8 +6,18 @@ import { sendChannelMessage, editChannelMessage } from "./discord";
 import type { EventRow } from "./events";
 import { eventPath } from "./slug";
 
-const CHANNEL_ID = process.env.DISCORD_CTA_CHANNEL_ID ?? "";
 const SITE_URL = (process.env.AUTH_URL ?? "https://dismount.team").replace(/\/$/, "");
+
+// Každý typ akce může mít vlastní kanál — zatím jen CTA je nastaveno, Ava
+// Raid a Random Content bez vlastního env padají zpátky na CTA kanál. Až
+// vzniknou vyhrazené kanály, stačí doplnit příslušnou env proměnnou.
+function resolveChannelId(type: string): string {
+  const perType: Record<string, string | undefined> = {
+    "Ava Raid": process.env.DISCORD_AVA_CHANNEL_ID,
+    "Random Content": process.env.DISCORD_RANDOM_CHANNEL_ID,
+  };
+  return perType[type] || process.env.DISCORD_CTA_CHANNEL_ID || "";
+}
 
 /** "YYYY-MM-DD HH:MM" (UTC) -> unix vteřiny, pro Discord <t:...> formát. */
 function toUnix(startsAt: string): number {
@@ -41,22 +51,24 @@ function announcePayload(event: EventRow, edited: boolean) {
  * Když editace selže (zpráva mezitím zmizela), pošle se nová.
  */
 export async function announceEvent(event: EventRow): Promise<string | null> {
-  if (!CHANNEL_ID) return null;
+  const channelId = resolveChannelId(event.type);
+  if (!channelId) return null;
   if (event.discord_message_id) {
     const ok = await editChannelMessage(
-      CHANNEL_ID,
+      channelId,
       event.discord_message_id,
       announcePayload(event, true)
     );
     if (ok) return event.discord_message_id;
   }
-  return sendChannelMessage(CHANNEL_ID, announcePayload(event, false));
+  return sendChannelMessage(channelId, announcePayload(event, false));
 }
 
 /** Zrušení akce — edituje původní post na "ZRUŠENO" (nemaže ho, ať to lidi vidí). */
 export async function cancelEventAnnouncement(event: EventRow): Promise<void> {
-  if (!CHANNEL_ID || !event.discord_message_id) return;
-  await editChannelMessage(CHANNEL_ID, event.discord_message_id, {
+  const channelId = resolveChannelId(event.type);
+  if (!channelId || !event.discord_message_id) return;
+  await editChannelMessage(channelId, event.discord_message_id, {
     embeds: [
       {
         title: `❌ ZRUŠENO: ${event.title}`,
@@ -73,12 +85,13 @@ export async function cancelEventAnnouncement(event: EventRow): Promise<void> {
 
 /** Reminder ~1 h před akcí do stejného kanálu (posílá cron endpoint). */
 export async function remindEvent(event: EventRow): Promise<string | null> {
-  if (!CHANNEL_ID) return null;
+  const channelId = resolveChannelId(event.type);
+  if (!channelId) return null;
   const unix = toUnix(event.starts_at);
   const url = `${SITE_URL}${eventPath(event.id, event.title)}`;
   // Prostý content nerozumí markdown odkazům [text](url) (na rozdíl od
   // embedu) — proto holá URL, Discord ji sám polinkuje.
-  return sendChannelMessage(CHANNEL_ID, {
+  return sendChannelMessage(channelId, {
     content: `⏰ **${event.title}** začíná <t:${unix}:R>! Kdo ještě nemá roli, mrkni sem: ${url}`,
   });
 }

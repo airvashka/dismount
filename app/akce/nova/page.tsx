@@ -4,8 +4,7 @@ import { atLeast } from "@/lib/roles";
 import { listTemplates, getTemplateText } from "@/lib/comps";
 import { createEventAction } from "../actions";
 import { CompEditor } from "@/components/comp-editor";
-
-const EVENT_TYPES = ["CTA", "ZvZ", "Ava Raid", "Hellgates", "Fame farm", "Jiné"];
+import { EVENT_TYPES } from "@/lib/event-types";
 
 export default async function NovaAkcePage() {
   const user = await getSessionUser();

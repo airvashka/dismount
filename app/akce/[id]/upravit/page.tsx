@@ -8,8 +8,7 @@ import { updateEventAction } from "../../actions";
 import { CompEditor } from "@/components/comp-editor";
 import { slotsToText } from "@/lib/comp-format";
 import { eventPath } from "@/lib/slug";
-
-const EVENT_TYPES = ["CTA", "ZvZ", "Ava Raid", "Hellgates", "Fame farm", "Jiné"];
+import { EVENT_TYPES } from "@/lib/event-types";
 
 export default async function UpravitAkciPage({
   params,
