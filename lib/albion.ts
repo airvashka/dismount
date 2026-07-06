@@ -421,7 +421,17 @@ export async function fetchTopKills(
     // co máme, to máme — případně prázdno
   }
   if (all.length === 0) return null;
-  return all
+
+  // API vrátí stejný kill klidně 2x (stránky se překrývají, když mezitím
+  // přibude nový kill a posune offset) — dedup podle EventId.
+  const seen = new Set<number>();
+  const deduped = all.filter((e) => {
+    if (seen.has(e.EventId)) return false;
+    seen.add(e.EventId);
+    return true;
+  });
+
+  return deduped
     .filter(
       (e) =>
         e.Killer?.GuildId === GAMEINFO_GUILD_ID &&
