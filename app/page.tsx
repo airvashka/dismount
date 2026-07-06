@@ -11,6 +11,16 @@ function fmtFame(n: number): string {
   return new Intl.NumberFormat("cs-CZ").format(n);
 }
 
+/** Killboard timestamp (ISO, UTC) -> "D.M. HH:MM UTC". */
+function fmtKillTime(iso: string): string {
+  const d = new Date(iso);
+  const day = d.getUTCDate();
+  const month = d.getUTCMonth() + 1;
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${day}.${month}. ${hh}:${mm} UTC`;
+}
+
 export default async function Home() {
   const [stats, kills] = await Promise.all([fetchGuildStats(), fetchTopKills()]);
 
@@ -117,8 +127,13 @@ export default async function Home() {
                         <span className="text-muted"> [{k.victimGuild}]</span>
                       )}
                     </span>
-                    <span className="ml-auto font-mono text-xs text-emerald-400">
-                      {fmtFame(k.fame)} fame
+                    <span className="ml-auto flex flex-col items-end gap-0.5">
+                      <span className="text-[10px] text-muted">
+                        {fmtKillTime(k.time)}
+                      </span>
+                      <span className="font-mono text-xs text-emerald-400">
+                        {fmtFame(k.fame)} fame
+                      </span>
                     </span>
                   </a>
                 </li>
