@@ -71,6 +71,21 @@ function migrate(db: Database.Database) {
       build TEXT NOT NULL DEFAULT '',
       note TEXT NOT NULL DEFAULT ''
     );
+
+    -- Historie verzí kompozic — snapshot PŘED každou úpravou/smazáním šablony
+    -- (viz lib/comps.ts snapshotTemplate). Záměrně BEZ FK/CASCADE na
+    -- comp_templates: historie musí přežít i smazání šablony, aby šla
+    -- obnovit jako nová.
+    CREATE TABLE IF NOT EXISTS comp_template_versions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      slots_text TEXT NOT NULL,
+      changed_by TEXT NOT NULL,
+      changed_by_name TEXT NOT NULL DEFAULT '',
+      deleted INTEGER NOT NULL DEFAULT 0,   -- 1 = snapshot těsně před smazáním šablony
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   // Dodatečné sloupce (migrace přes ALTER TABLE, guard přes PRAGMA table_info):

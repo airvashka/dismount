@@ -24,14 +24,24 @@ export async function saveTemplateAction(formData: FormData) {
 
   if (!name) throw new Error("Chybí název kompozice.");
 
-  comps.saveTemplate(id, name, slotsText, user.discordId);
+  comps.saveTemplate(id, name, slotsText, user.discordId, user.name);
   revalidatePath("/kompozice");
   redirect("/kompozice");
 }
 
 export async function deleteTemplateAction(formData: FormData) {
-  await requireCaller();
-  comps.deleteTemplate(Number(formData.get("id")));
+  const user = await requireCaller();
+  comps.deleteTemplate(Number(formData.get("id")), user.discordId, user.name);
   revalidatePath("/kompozice");
   redirect("/kompozice");
+}
+
+/** Obnoví libovolnou verzi (i smazané šablony) jako novou kompozici. */
+export async function restoreTemplateVersionAction(formData: FormData) {
+  const user = await requireCaller();
+  const versionId = Number(formData.get("version_id"));
+  const newId = comps.restoreTemplateVersion(versionId, user.discordId);
+  if (!newId) throw new Error("Tuto verzi se nepodařilo najít.");
+  revalidatePath("/kompozice");
+  redirect(`/kompozice/${newId}`);
 }

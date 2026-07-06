@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/session";
 import { atLeast } from "@/lib/roles";
-import { listTemplates } from "@/lib/comps";
+import { listTemplates, getDeletedTemplates } from "@/lib/comps";
+import { restoreTemplateVersionAction } from "./actions";
+import { LocalTime } from "@/components/local-time";
 
 export const metadata = { title: "Kompozice – Dismount" };
 
@@ -20,6 +22,7 @@ export default async function KompozicePage() {
   }
 
   const templates = listTemplates();
+  const deleted = getDeletedTemplates();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
@@ -53,6 +56,40 @@ export default async function KompozicePage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {deleted.length > 0 && (
+        <div className="mt-10">
+          <h2 className="font-semibold text-muted">Smazané kompozice</h2>
+          <p className="mt-1 text-sm text-muted">
+            Poslední stav před smazáním — obnovením vznikne nová kompozice.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {deleted.map((v) => (
+              <li
+                key={v.id}
+                className="flex items-center justify-between gap-4 rounded-lg border border-border bg-surface/50 p-3 text-sm"
+              >
+                <span>
+                  <span className="font-medium">{v.name}</span>
+                  <span className="ml-2 text-muted">
+                    smazáno <LocalTime utc={v.created_at} />
+                    {v.changed_by_name && <> · {v.changed_by_name}</>}
+                  </span>
+                </span>
+                <form action={restoreTemplateVersionAction}>
+                  <input type="hidden" name="version_id" value={v.id} />
+                  <button
+                    type="submit"
+                    className="rounded border border-accent px-3 py-1 text-xs text-accent hover:bg-accent hover:text-background cursor-pointer whitespace-nowrap"
+                  >
+                    Obnovit
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
