@@ -30,6 +30,7 @@ export default async function RootLayout({
 }>) {
   const user = await getSessionUser();
   const isCaller = atLeast(user?.webRole, "caller");
+  const isMember = atLeast(user?.webRole, "friend");
 
   return (
     <html
@@ -55,6 +56,11 @@ export default async function RootLayout({
               <Link href="/akce" className="text-sm text-muted hover:text-foreground">
                 Akce
               </Link>
+              {isMember && (
+                <Link href="/historie" className="text-sm text-muted hover:text-foreground">
+                  Historie
+                </Link>
+              )}
               {isCaller && (
                 <Link
                   href="/kompozice"

@@ -111,6 +111,31 @@ export function getSignups(eventId: number): SignupRow[] {
     .all(eventId) as SignupRow[];
 }
 
+export type ParticipationRow = {
+  event_id: number;
+  event_title: string;
+  starts_at: string;
+  discord_id: string;
+  display_name: string;
+  role_name: string;
+  build: string;
+};
+
+/** Kdo hrál jakou roli na proběhlých (archivovaných) akcích, od nejnovější. */
+export function getParticipationHistory(): ParticipationRow[] {
+  return getDb()
+    .prepare(
+      `SELECT e.id AS event_id, e.title AS event_title, e.starts_at,
+              s.discord_id, s.display_name, sl.role_name, sl.build
+       FROM signups s
+       JOIN events e ON e.id = s.event_id
+       JOIN event_slots sl ON sl.id = s.slot_id
+       WHERE e.starts_at < datetime('now', '-2 hours')
+       ORDER BY e.starts_at DESC`
+    )
+    .all() as ParticipationRow[];
+}
+
 export type NewSlot = {
   party: string;
   role_name: string;
