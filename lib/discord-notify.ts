@@ -2,7 +2,7 @@
 // Bez DISCORD_CTA_CHANNEL_ID / DISCORD_BOT_TOKEN je vše no-op (viz
 // sendChannelMessage) — appka jede dál, jen nic neposílá.
 
-import { sendChannelMessage } from "./discord";
+import { sendChannelMessage, editChannelMessage } from "./discord";
 import type { EventRow } from "./events";
 import { eventPath } from "./slug";
 
@@ -15,12 +15,10 @@ function toUnix(startsAt: string): number {
   return Math.floor(new Date((iso.length === 16 ? iso + ":00" : iso) + "Z").getTime() / 1000);
 }
 
-/** Nové vypsání akce (nebo úprava data/názvu) — pošle embed s odkazem. */
-export async function announceEvent(event: EventRow): Promise<string | null> {
-  if (!CHANNEL_ID) return null;
+function announcePayload(event: EventRow, edited: boolean) {
   const unix = toUnix(event.starts_at);
   const url = `${SITE_URL}${eventPath(event.id, event.title)}`;
-  return sendChannelMessage(CHANNEL_ID, {
+  return {
     embeds: [
       {
         title: `📢 ${event.title}`,
@@ -31,9 +29,28 @@ export async function announceEvent(event: EventRow): Promise<string | null> {
           { name: "Typ", value: event.type, inline: true },
           { name: "Kdy", value: `<t:${unix}:F> (<t:${unix}:R>)`, inline: false },
         ],
+        ...(edited ? { footer: { text: "✏️ Upraveno" } } : {}),
       },
     ],
-  });
+  };
+}
+
+/**
+ * Vypsání akce pošle nový embed; úprava (voláno znovu se stejným eventem,
+ * který už má discord_message_id) EDITUJE původní zprávu místo nového postu.
+ * Když editace selže (zpráva mezitím zmizela), pošle se nová.
+ */
+export async function announceEvent(event: EventRow): Promise<string | null> {
+  if (!CHANNEL_ID) return null;
+  if (event.discord_message_id) {
+    const ok = await editChannelMessage(
+      CHANNEL_ID,
+      event.discord_message_id,
+      announcePayload(event, true)
+    );
+    if (ok) return event.discord_message_id;
+  }
+  return sendChannelMessage(CHANNEL_ID, announcePayload(event, false));
 }
 
 /** Reminder ~1 h před akcí do stejného kanálu (posílá cron endpoint). */

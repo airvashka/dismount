@@ -41,11 +41,44 @@ export function isDiscordConfigured(): boolean {
   return Boolean(process.env.AUTH_DISCORD_ID && process.env.AUTH_DISCORD_SECRET);
 }
 
+/**
+ * Upraví existující zprávu (místo nového postu při každé úpravě akce).
+ * Vrací false i když zpráva třeba mezitím zmizela (smazaná ručně) — volající
+ * si pak může poslat novou.
+ */
+export async function editChannelMessage(
+  channelId: string,
+  messageId: string,
+  payload: { content?: string; embeds?: DiscordEmbed[] }
+): Promise<boolean> {
+  const token = process.env.DISCORD_BOT_TOKEN;
+  if (!token || !channelId || !messageId) return false;
+  try {
+    const res = await fetch(`${API}/channels/${channelId}/messages/${messageId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bot ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      console.error("Discord API: nelze upravit zprávu", res.status, await res.text());
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Discord API: chyba při úpravě zprávy", err);
+    return false;
+  }
+}
+
 export type DiscordEmbed = {
   title?: string;
   description?: string;
   color?: number;
   fields?: Array<{ name: string; value: string; inline?: boolean }>;
+  footer?: { text: string };
 };
 
 /**
