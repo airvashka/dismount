@@ -53,6 +53,24 @@ export async function announceEvent(event: EventRow): Promise<string | null> {
   return sendChannelMessage(CHANNEL_ID, announcePayload(event, false));
 }
 
+/** Zrušení akce — edituje původní post na "ZRUŠENO" (nemaže ho, ať to lidi vidí). */
+export async function cancelEventAnnouncement(event: EventRow): Promise<void> {
+  if (!CHANNEL_ID || !event.discord_message_id) return;
+  await editChannelMessage(CHANNEL_ID, event.discord_message_id, {
+    embeds: [
+      {
+        title: `❌ ZRUŠENO: ${event.title}`,
+        color: 0xdc2626,
+        description: "Tato akce byla zrušena.",
+        fields: [
+          { name: "Caller", value: event.created_by_name, inline: true },
+          { name: "Typ", value: event.type, inline: true },
+        ],
+      },
+    ],
+  });
+}
+
 /** Reminder ~1 h před akcí do stejného kanálu (posílá cron endpoint). */
 export async function remindEvent(event: EventRow): Promise<string | null> {
   if (!CHANNEL_ID) return null;

@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/session";
 import { atLeast } from "@/lib/roles";
 import * as events from "@/lib/events";
 import { parseSlotLines } from "@/lib/comp-format";
-import { announceEvent } from "@/lib/discord-notify";
+import { announceEvent, cancelEventAnnouncement } from "@/lib/discord-notify";
 
 // Kdo smí co (jedno místo pro doladění pravidel):
 const CAN_CREATE = "caller" as const; // vypisovat akce
@@ -193,6 +193,14 @@ export async function deleteEventAction(formData: FormData) {
   const isOwner = event.created_by === user?.discordId;
   if (!user || (!isOwner && !atLeast(user.webRole, "admin"))) {
     throw new Error("Akci může zrušit jen její caller nebo vedení.");
+  }
+
+  // Nejdřív označit Discord post jako zrušený (potřebuje ještě data akce),
+  // pak teprve smazat z DB — přihlášky zmizí samy přes ON DELETE CASCADE.
+  try {
+    await cancelEventAnnouncement(event);
+  } catch (err) {
+    console.error("Nepodařilo se označit Discord oznámení jako zrušené", err);
   }
 
   events.deleteEvent(eventId);
