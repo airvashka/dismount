@@ -17,7 +17,7 @@ export default async function AkceDetailPage({
   searchParams: Promise<{ chyba?: string }>;
 }) {
   const user = await getSessionUser();
-  if (!user || !atLeast(user.webRole, "friend")) {
+  if (!user || !atLeast(user.webRole, "member")) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-24 text-center">
         <p className="text-muted">Detail akce je jen pro členy guildy.</p>
@@ -116,7 +116,7 @@ export default async function AkceDetailPage({
           offers: s.offers,
         }))}
         discordId={user.discordId}
-        canSignup={atLeast(user.webRole, "friend") && !locked}
+        canSignup={atLeast(user.webRole, "member") && !locked}
         isCaller={atLeast(user.webRole, "caller") && !locked}
       />
     </div>

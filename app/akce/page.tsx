@@ -22,7 +22,7 @@ export default async function AkcePage() {
     );
   }
 
-  if (!atLeast(user.webRole, "friend")) {
+  if (!atLeast(user.webRole, "member")) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-24 text-center">
         <h1 className="text-2xl font-bold">Akce</h1>
