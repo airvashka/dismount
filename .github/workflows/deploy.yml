@@ -1,0 +1,19 @@
+name: Deploy na produkci
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Nasadit dismount-web
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          # Server má u tohohle klíče vynucený příkaz (authorized_keys) — bez
+          # ohledu na to, co se sem napíše, vždy se spustí jen deploy.sh.
+          script: deploy
