@@ -1,7 +1,23 @@
 import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
+import type { JWT } from "next-auth/jwt";
 import { fetchGuildMember } from "@/lib/discord";
-import { mapRoles, type WebRole } from "@/lib/roles";
+import { mapRoles, ROLE_REFRESH_MS, type WebRole } from "@/lib/roles";
+
+async function refreshGuildRoles(token: JWT, discordId: string): Promise<void> {
+  const member = await fetchGuildMember(discordId);
+  if (member === null) {
+    // Bot není nakonfigurován — role neměň (nech poslední známý stav).
+    return;
+  }
+  const webRole = member.isInGuild
+    ? mapRoles(member.roleIds)
+    : ("guest" satisfies WebRole);
+  token.webRole = webRole;
+  token.isInGuild = webRole !== "guest";
+  if (member.nick) token.name = member.nick;
+  token.rolesCheckedAt = Date.now();
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -11,20 +27,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, account, profile }) {
-      // Při prvním přihlášení: zjistit role na guild serveru přes bota.
+      const now = Date.now();
+
+      // Discord OAuth login — vždy načíst role.
       if (account && profile?.id) {
         token.discordId = profile.id as string;
         const member = await fetchGuildMember(profile.id as string);
         if (member === null) {
-          // Bot ještě není nakonfigurován/na serveru -> každý přihlášený je guest.
           token.webRole = "guest" satisfies WebRole;
           token.isInGuild = false;
         } else {
-          token.webRole = member.isInGuild ? mapRoles(member.roleIds) : "guest";
-          token.isInGuild = member.isInGuild;
+          const webRole = member.isInGuild
+            ? mapRoles(member.roleIds)
+            : ("guest" satisfies WebRole);
+          token.webRole = webRole;
+          token.isInGuild = webRole !== "guest";
           if (member.nick) token.name = member.nick;
         }
+        token.rolesCheckedAt = now;
+        return token;
       }
+
+      // Periodický refresh (TTL) — badge + kick bez nutnosti re-loginu.
+      const checkedAt = Number(token.rolesCheckedAt ?? 0);
+      if (
+        token.discordId &&
+        (!checkedAt || now - checkedAt >= ROLE_REFRESH_MS)
+      ) {
+        await refreshGuildRoles(token, token.discordId as string);
+      }
+
       return token;
     },
     async session({ session, token }) {

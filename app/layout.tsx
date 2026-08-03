@@ -30,7 +30,7 @@ export default async function RootLayout({
 }>) {
   const user = await getSessionUser();
   const isCaller = atLeast(user?.webRole, "caller");
-  const isMember = atLeast(user?.webRole, "friend");
+  const isMember = atLeast(user?.webRole, "dismount");
 
   return (
     <html

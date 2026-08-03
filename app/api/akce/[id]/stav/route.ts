@@ -11,7 +11,7 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> }
 ) {
   const user = await getSessionUser();
-  if (!user || !atLeast(user.webRole, "friend")) {
+  if (!user || !atLeast(user.webRole, "dismount")) {
     return Response.json({ error: "unauthorized" }, { status: 403 });
   }
 
