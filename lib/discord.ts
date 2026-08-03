@@ -41,6 +41,20 @@ export function isDiscordConfigured(): boolean {
   return Boolean(process.env.AUTH_DISCORD_ID && process.env.AUTH_DISCORD_SECRET);
 }
 
+export type DiscordEmbed = {
+  title?: string;
+  description?: string;
+  color?: number;
+  fields?: Array<{ name: string; value: string; inline?: boolean }>;
+  footer?: { text: string };
+};
+
+type MessagePayload = {
+  content?: string;
+  embeds?: DiscordEmbed[];
+  allowed_mentions?: { parse?: Array<"everyone" | "roles" | "users"> };
+};
+
 /**
  * Upraví existující zprávu (místo nového postu při každé úpravě akce).
  * Vrací false i když zpráva třeba mezitím zmizela (smazaná ručně) — volající
@@ -49,7 +63,7 @@ export function isDiscordConfigured(): boolean {
 export async function editChannelMessage(
   channelId: string,
   messageId: string,
-  payload: { content?: string; embeds?: DiscordEmbed[] }
+  payload: MessagePayload
 ): Promise<boolean> {
   const token = process.env.DISCORD_BOT_TOKEN;
   if (!token || !channelId || !messageId) return false;
@@ -73,14 +87,6 @@ export async function editChannelMessage(
   }
 }
 
-export type DiscordEmbed = {
-  title?: string;
-  description?: string;
-  color?: number;
-  fields?: Array<{ name: string; value: string; inline?: boolean }>;
-  footer?: { text: string };
-};
-
 /**
  * Pošle zprávu do Discord kanálu (embed a/nebo obyčejný text). Bez
  * DISCORD_BOT_TOKEN nebo bez channelId je no-op (vrátí null) — appka
@@ -88,7 +94,7 @@ export type DiscordEmbed = {
  */
 export async function sendChannelMessage(
   channelId: string,
-  payload: { content?: string; embeds?: DiscordEmbed[] }
+  payload: MessagePayload
 ): Promise<string | null> {
   const token = process.env.DISCORD_BOT_TOKEN;
   if (!token || !channelId) return null;
