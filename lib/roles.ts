@@ -1,12 +1,11 @@
 // Mapování Discord rolí -> role na webu.
-// Mapuje se podle ID role (přejmenování role na Discordu nic nerozbije).
-// Hráč může mít víc rolí (např. Caller + Officer) — bere se ta nejvyšší.
+// Vstup na guild část webu = role Dismount. Rank role jen určují badge a práva.
+// Hráč může mít víc rolí — bere se ta nejvyšší.
 
 export type WebRole =
   | "guest"
-  | "ally"
-  | "friend"
-  | "novacek"
+  | "dismount"
+  | "novice"
   | "recruit"
   | "member"
   | "caller"
@@ -14,45 +13,51 @@ export type WebRole =
 
 export const HIERARCHY: WebRole[] = [
   "guest",
-  "ally",
-  "friend",
-  "novacek",
+  "dismount",
+  "novice",
   "recruit",
   "member",
   "caller",
   "admin",
 ];
 
-// Discord role ID -> webová role (server guildy Dismount)
+/** Guild role — bez ní je uživatel na webu guest (i když je na Discord serveru). */
+export const DISMOUNT_ROLE_ID = "1223298803520503941";
+
+/** Jak často znovu načíst Discord role do JWT (ne při každém requestu). */
+export const ROLE_REFRESH_MS = 60 * 60 * 1000; // 1 hodina
+
+// Discord role ID -> webová role
 export const ROLE_MAP: Record<string, WebRole> = {
-  "1258437128417706136": "admin", // GM / vedení guildy
-  "1223291640697982976": "admin", // [RH] Right Hand
-  "1223314990984073286": "admin", // [DA] Discord Admin
-  "1311012789547958372": "admin", // [O] Officer / člen vedení
-  "1249701849523814442": "caller", // [C] Caller
-  "1234067078563106866": "caller", // [AC] Ava Caller
-  "1238942644122550393": "member", // [RE] Recruiter
-  "1257836020398031049": "member", // [M] Member
-  "1257835823655551016": "recruit", // [R] Zkušený hráč, nový v guildě
-  "1257835642868596837": "novacek", // [NO] Nováček
-  "1238958037926936727": "friend", // [F] Friend
-  "1273754545687892091": "ally", // Členové aliance
+  "1354154330130747536": "admin", // Leadership (full admin)
+  "1249701849523814442": "caller", // Caller
+  "1257836020398031049": "member", // Member
+  "1257835823655551016": "recruit", // Recruit
+  "1257835642868596837": "novice", // Novice
+  [DISMOUNT_ROLE_ID]: "dismount", // Dismount — fallback / vstupní role
 };
 
 export const ROLE_LABELS: Record<WebRole, string> = {
   guest: "Host",
-  ally: "Aliance",
-  friend: "Friend",
-  novacek: "Nováček",
+  dismount: "Dismount",
+  novice: "Novice",
   recruit: "Recruit",
   member: "Member",
   caller: "Caller",
-  admin: "Vedení",
+  admin: "Leadership",
 };
 
-/** Z ID Discord rolí člena vybere nejvyšší odpovídající webovou roli. */
+/**
+ * Bez role Dismount → guest.
+ * Jen Dismount → "dismount".
+ * Jinak nejvyšší z Novice / Recruit / Member / Caller / Leadership.
+ */
 export function mapRoles(discordRoleIds: string[]): WebRole {
-  let best: WebRole = "guest";
+  if (!discordRoleIds.includes(DISMOUNT_ROLE_ID)) {
+    return "guest";
+  }
+
+  let best: WebRole = "dismount";
   for (const id of discordRoleIds) {
     const mapped = ROLE_MAP[id];
     if (mapped && HIERARCHY.indexOf(mapped) > HIERARCHY.indexOf(best)) {

@@ -22,13 +22,12 @@ export default async function AkcePage() {
     );
   }
 
-  if (!atLeast(user.webRole, "member")) {
+  if (!atLeast(user.webRole, "dismount")) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-24 text-center">
         <h1 className="text-2xl font-bold">Akce</h1>
         <p className="mt-4 text-muted">
-          Tvůj Discord účet nemá na serveru Dismount potřebnou roli. Pokud jsi
-          nový, napiš na Discordu o roli.
+          Přihlašování na akce je jen pro členy guildy (Discord role Dismount).
         </p>
       </div>
     );

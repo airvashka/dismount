@@ -13,7 +13,7 @@ export default async function HistoriePage({
   searchParams: Promise<{ hrac?: string }>;
 }) {
   const user = await getSessionUser();
-  if (!user || !atLeast(user.webRole, "friend")) {
+  if (!user || !atLeast(user.webRole, "dismount")) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-24 text-center">
         <p className="text-muted">Historie účasti je jen pro členy guildy.</p>

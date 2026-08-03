@@ -9,8 +9,8 @@ import { parseSlotLines } from "@/lib/comp-format";
 import { announceEvent, cancelEventAnnouncement } from "@/lib/discord-notify";
 
 // Kdo smí co (jedno místo pro doladění pravidel):
-const CAN_CREATE = "caller" as const; // vypisovat akce
-const CAN_SIGNUP = "friend" as const; // přihlašovat se na akce
+const CAN_CREATE = "caller" as const; // vypisovat / upravovat / mazat (Caller + Leadership)
+const CAN_SIGNUP = "dismount" as const; // guilda = role Dismount
 
 export async function createEventAction(formData: FormData) {
   const user = await getSessionUser();
@@ -191,8 +191,8 @@ export async function deleteEventAction(formData: FormData) {
   if (!event) redirect("/akce");
 
   const isOwner = event.created_by === user?.discordId;
-  if (!user || (!isOwner && !atLeast(user.webRole, "admin"))) {
-    throw new Error("Akci může zrušit jen její caller nebo vedení.");
+  if (!user || (!isOwner && !atLeast(user.webRole, CAN_CREATE))) {
+    throw new Error("Akci může zrušit jen její caller, Caller nebo Leadership.");
   }
 
   // Nejdřív označit Discord post jako zrušený (potřebuje ještě data akce),

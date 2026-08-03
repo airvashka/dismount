@@ -17,10 +17,10 @@ export default async function AkceDetailPage({
   searchParams: Promise<{ chyba?: string }>;
 }) {
   const user = await getSessionUser();
-  if (!user || !atLeast(user.webRole, "member")) {
+  if (!user || !atLeast(user.webRole, "dismount")) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-24 text-center">
-        <p className="text-muted">Detail akce je jen pro členy guildy.</p>
+        <p className="text-muted">Detail akce je jen pro členy guildy (role Dismount).</p>
       </div>
     );
   }
@@ -36,7 +36,7 @@ export default async function AkceDetailPage({
   const signups = getSignups(event.id);
   const locked = isLocked(event);
   const canDelete =
-    event.created_by === user.discordId || atLeast(user.webRole, "admin");
+    event.created_by === user.discordId || atLeast(user.webRole, "caller");
   const canEdit = atLeast(user.webRole, "caller") && !locked;
 
   return (
@@ -116,7 +116,7 @@ export default async function AkceDetailPage({
           offers: s.offers,
         }))}
         discordId={user.discordId}
-        canSignup={atLeast(user.webRole, "member") && !locked}
+        canSignup={atLeast(user.webRole, "dismount") && !locked}
         isCaller={atLeast(user.webRole, "caller") && !locked}
       />
     </div>

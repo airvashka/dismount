@@ -1,6 +1,6 @@
 // Oznámení akcí do Discordu — vypsání/úprava (embed) a 1h reminder (text).
-// Bez DISCORD_CTA_CHANNEL_ID / DISCORD_BOT_TOKEN je vše no-op (viz
-// sendChannelMessage) — appka jede dál, jen nic neposílá.
+// Bez DISCORD_BOT_TOKEN je vše no-op (viz sendChannelMessage) — appka jede
+// dál, jen nic neposílá.
 
 import { sendChannelMessage, editChannelMessage } from "./discord";
 import type { EventRow } from "./events";
@@ -8,15 +8,15 @@ import { eventPath } from "./slug";
 
 const SITE_URL = (process.env.AUTH_URL ?? "https://dismount.team").replace(/\/$/, "");
 
-// Každý typ akce může mít vlastní kanál — zatím jen CTA je nastaveno, Ava
-// Raid a Random Content bez vlastního env padají zpátky na CTA kanál. Až
-// vzniknou vyhrazené kanály, stačí doplnit příslušnou env proměnnou.
+// Produkční CTA kanál (#call-to-arms). Ava/Random můžou mít vlastní env.
+const CTA_CHANNEL_ID = "1515762742852587711";
+
 function resolveChannelId(type: string): string {
   const perType: Record<string, string | undefined> = {
     "Ava Raid": process.env.DISCORD_AVA_CHANNEL_ID,
     "Random Content": process.env.DISCORD_RANDOM_CHANNEL_ID,
   };
-  return perType[type] || process.env.DISCORD_CTA_CHANNEL_ID || "";
+  return perType[type] || CTA_CHANNEL_ID;
 }
 
 /** "YYYY-MM-DD HH:MM" (UTC) -> unix vteřiny, pro Discord <t:...> formát. */
@@ -29,6 +29,8 @@ function announcePayload(event: EventRow, edited: boolean) {
   const unix = toUnix(event.starts_at);
   const url = `${SITE_URL}${eventPath(event.id, event.title)}`;
   return {
+    ...(!edited ? { content: "@everyone" } : {}),
+    allowed_mentions: { parse: ["everyone"] },
     embeds: [
       {
         title: `📢 ${event.title}`,
