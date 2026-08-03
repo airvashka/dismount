@@ -2,7 +2,11 @@
 // Bez DISCORD_BOT_TOKEN je vše no-op (viz sendChannelMessage) — appka jede
 // dál, jen nic neposílá.
 
-import { sendChannelMessage, editChannelMessage } from "./discord";
+import {
+  sendChannelMessage,
+  editChannelMessage,
+  type MessagePayload,
+} from "./discord";
 import type { EventRow } from "./events";
 import { eventPath } from "./slug";
 
@@ -25,7 +29,7 @@ function toUnix(startsAt: string): number {
   return Math.floor(new Date((iso.length === 16 ? iso + ":00" : iso) + "Z").getTime() / 1000);
 }
 
-function announcePayload(event: EventRow, edited: boolean) {
+function announcePayload(event: EventRow, edited: boolean): MessagePayload {
   const unix = toUnix(event.starts_at);
   const url = `${SITE_URL}${eventPath(event.id, event.title)}`;
   return {

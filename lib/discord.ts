@@ -49,7 +49,7 @@ export type DiscordEmbed = {
   footer?: { text: string };
 };
 
-type MessagePayload = {
+export type MessagePayload = {
   content?: string;
   embeds?: DiscordEmbed[];
   allowed_mentions?: { parse?: Array<"everyone" | "roles" | "users"> };
