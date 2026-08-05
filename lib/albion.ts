@@ -61,7 +61,9 @@ for (const it of SPECIAL_MOUNTS) NAME_TO_ID.set(it.name.toLowerCase(), it.id);
 function cleanPartName(part: string): string {
   return part
     .replace(/\(.*?\)/g, " ")
-    .replace(/\bT[1-8](\.\d)?\+?\b/gi, " ")
+    // T1–T8 (+ T7.1), slang T9–T12 (= T8@1–@4) — musí pryč, jinak
+    // přesný lookup v katalogu selže a spadne se do regex fallbacků.
+    .replace(/\bT(?:[1-8](?:\.\d)?|9|1[0-2])\+?\b/gi, " ")
     .replace(/\b[1-8]\.\d\+?\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -136,7 +138,8 @@ const ROLE_ICONS: Array<[RegExp, string]> = [
   [/bow|luk/i, "T8_2H_BOW"],
   // --- Spear ---
   [/glaive/i, "T8_2H_GLAIVE"],
-  [/spear|kopi|kopí|pike/i, "T8_MAIN_SPEAR"],
+  // \bpike\b — ne jen "pike", ať "Spiked Gauntlets" neskončí jako Pike
+  [/spear|kopi|kopí|\bpike\b/i, "T8_MAIN_SPEAR"],
   // --- Obecné role jako poslední záchrana ---
   [/tank/i, "T8_2H_MACE"],
   [/heal/i, "T8_MAIN_HOLYSTAFF"],
