@@ -106,15 +106,10 @@ export function EventBoard({
   const [pickedRoles, setPickedRoles] = useState<string[]>([]);
   const [fill, setFill] = useState(false);
 
-  // Vlastní akce (drag&drop, přihlášení, odhlášení) revalidují stránku
-  // na serveru a pošlou čerstvý prop — promítni ho hned, nečekej na polling.
   useEffect(() => {
     setSignups(initialSignups);
   }, [initialSignups]);
 
-  // Živý stav bez refreshe — kdo se přihlásí/odhlásí/je přeřazen se objeví
-  // ostatním do 5 s. Během tažení se polling nezastavuje, ale je neškodný
-  // (dragged je ryze lokální stav, nová data se jen promítnou do tabulky).
   useEffect(() => {
     let cancelled = false;
     const tick = async () => {
@@ -124,7 +119,7 @@ export function EventBoard({
         const data = await res.json();
         if (!cancelled && Array.isArray(data.signups)) setSignups(data.signups);
       } catch {
-        // dočasný výpadek sítě — zkusí se to znovu za 5 s
+        /* retry next interval */
       }
     };
     const id = setInterval(tick, 5000);
@@ -133,6 +128,49 @@ export function EventBoard({
       clearInterval(id);
     };
   }, [eventId]);
+
+  // HTML5 DnD blocks normal scrolling — auto-scroll near viewport edges + wheel.
+  useEffect(() => {
+    if (!dragged) return;
+
+    const EDGE = 72;
+    const MAX_SPEED = 32;
+    let latestY = window.innerHeight / 2;
+    let raf = 0;
+    let running = true;
+
+    const onDragOver = (e: DragEvent) => {
+      latestY = e.clientY;
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      window.scrollBy(0, e.deltaY);
+    };
+
+    const step = () => {
+      if (!running) return;
+      const vh = window.innerHeight;
+      if (latestY < EDGE) {
+        const t = (EDGE - latestY) / EDGE;
+        window.scrollBy(0, -Math.ceil(MAX_SPEED * t));
+      } else if (latestY > vh - EDGE) {
+        const t = (latestY - (vh - EDGE)) / EDGE;
+        window.scrollBy(0, Math.ceil(MAX_SPEED * t));
+      }
+      raf = requestAnimationFrame(step);
+    };
+
+    document.addEventListener("dragover", onDragOver);
+    document.addEventListener("wheel", onWheel, { passive: true });
+    raf = requestAnimationFrame(step);
+
+    return () => {
+      running = false;
+      cancelAnimationFrame(raf);
+      document.removeEventListener("dragover", onDragOver);
+      document.removeEventListener("wheel", onWheel);
+    };
+  }, [dragged]);
 
   const bySlot = new Map(signups.filter((s) => s.slot_id).map((s) => [s.slot_id, s]));
   const waiting = signups.filter((s) => s.slot_id === null);
