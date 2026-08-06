@@ -5,7 +5,7 @@
 // možnost vybrat až 3 VARIANTY na kus ("Stalker Shoes/Mercenary Shoes T7").
 // „Přidat řádek" vloží hotový řádek do kompozice; výběr zůstává pro další.
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ITEM_CATALOG,
   findCatalogItem,
@@ -257,6 +257,47 @@ function PickerField({
   );
 }
 
+function selsFromPrefill(prefill: PickerPrefill): Record<CatalogCategory, Sel> {
+  const next = emptySels();
+  const addPart = (part: string, isRoleField: boolean) => {
+    let tier = 8;
+    let m = part.match(/\b([4-8])\.([1-4])\+?\b/);
+    if (m) tier = 8 + Number(m[2]);
+    else if ((m = part.match(/\bT(9|1[0-2])\b/i))) tier = Number(m[1]);
+    else if ((m = part.match(/\b(?:T)?([4-8])(?:\.[1-4])?\+?\b/i)))
+      tier = Number(m[1]);
+    tier = Math.max(6, Math.min(11, tier));
+    for (const seg of part.split("/").map((s) => s.trim()).filter(Boolean)) {
+      if (/^caller$/i.test(seg)) {
+        if (next.weapon.items.length === 0)
+          next.weapon = { items: [CALLER_ITEM], tier: 8 };
+        continue;
+      }
+      const hit = findCatalogItem(seg);
+      if (!hit) continue;
+      const targetCat = isRoleField && hit.cat === "mount" ? "weapon" : hit.cat;
+      const box = next[targetCat];
+      if (
+        box.items.length < MAX_VARIANTS &&
+        !box.items.some((x) => x.id === hit.item.id)
+      ) {
+        box.items.push(hit.item);
+        const options = tierOptionsFor(box.items);
+        box.tier = options.includes(tier) ? tier : options[0];
+      }
+    }
+  };
+  addPart(prefill.role_name, true);
+  for (const part of prefill.build
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean)) {
+    addPart(part, false);
+  }
+  if (prefill.note) addPart(prefill.note, false);
+  return next;
+}
+
 export function SlotPicker({
   onAdd,
   prefill,
@@ -269,53 +310,11 @@ export function SlotPicker({
   onCancelEdit?: () => void;
 }) {
   const [sels, setSels] = useState<Record<CatalogCategory, Sel>>(emptySels);
-
-  // Zpětné načtení existujícího řádku (klik na ✎ v náhledu) — rozumí
-  // i variantám ("Royal/stalker T7") a slangu.
-  useEffect(() => {
-    if (!prefill) return;
-    const next = emptySels();
-    const addPart = (part: string, isRoleField: boolean) => {
-      // "N.M" (N=4-8, i libovolný strop, ne jen T8) -> T(8+M) interně;
-      // "T9"-"T12" přímo; jinak T4-T8 z prostého zápisu.
-      let tier = 8;
-      let m = part.match(/\b([4-8])\.([1-4])\+?\b/);
-      if (m) tier = 8 + Number(m[2]);
-      else if ((m = part.match(/\bT(9|1[0-2])\b/i))) tier = Number(m[1]);
-      else if ((m = part.match(/\b(?:T)?([4-8])(?:\.[1-4])?\+?\b/i)))
-        tier = Number(m[1]);
-      tier = Math.max(6, Math.min(11, tier));
-      for (const seg of part.split("/").map((s) => s.trim()).filter(Boolean)) {
-        if (/^caller$/i.test(seg)) {
-          if (next.weapon.items.length === 0) next.weapon = { items: [CALLER_ITEM], tier: 8 };
-          continue;
-        }
-        const hit = findCatalogItem(seg);
-        if (!hit) continue;
-        // Battlemount jako role_name (bez skutečné zbraně) patří do pole
-        // Zbraň, i když item sám je kategorie "mount" — jinak by po ✎ zůstal
-        // Zbraň prázdná a "Uložit"/"Přidat" by šlo zakázané.
-        const targetCat = isRoleField && hit.cat === "mount" ? "weapon" : hit.cat;
-        const box = next[targetCat];
-        if (
-          box.items.length < MAX_VARIANTS &&
-          !box.items.some((x) => x.id === hit.item.id)
-        ) {
-          box.items.push(hit.item);
-          // T9+ = enchant, iconOf si tier na maxTier@e přepočte; ale zaklapnout
-          // na reálně nabízenou možnost (item s nižším stropem než T8 T8 samo nemá).
-          const options = tierOptionsFor(box.items);
-          box.tier = options.includes(tier) ? tier : options[0];
-        }
-      }
-    };
-    addPart(prefill.role_name, true);
-    for (const part of prefill.build.split(",").map((p) => p.trim()).filter(Boolean)) {
-      addPart(part, false);
-    }
-    if (prefill.note) addPart(prefill.note, false);
-    setSels(next);
-  }, [prefill]);
+  const [prefillSource, setPrefillSource] = useState(prefill);
+  if (prefill !== prefillSource) {
+    setPrefillSource(prefill);
+    if (prefill) setSels(selsFromPrefill(prefill));
+  }
 
   const nameOf = (s: Sel) => {
     if (s.items.length === 1 && s.items[0].id === "CALLER") return "CALLER";
@@ -351,7 +350,7 @@ export function SlotPicker({
     <div className="mt-2 rounded-lg border border-border bg-background/40 p-2">
       {editing && (
         <div className="mb-1.5 rounded border border-accent/40 bg-accent/10 px-2 py-1 text-[11px] text-accent">
-          ✎ Upravuješ existující řádek — „Uložit změny" ho nahradí, nepřidá nový.
+          ✎ Upravuješ existující řádek — „Uložit změny“ ho nahradí, nepřidá nový.
         </div>
       )}
       <div className="grid gap-1.5">

@@ -22,7 +22,7 @@ export async function AuthControls() {
               <span className="rounded border border-red-500/50 px-2 py-0.5 text-xs text-red-400">
                 test
               </span>
-              <DevRoleSwitcher current={user.webRole} />
+              <DevRoleSwitcher key={user.webRole} current={user.webRole} />
             </span>
           )}
         </span>

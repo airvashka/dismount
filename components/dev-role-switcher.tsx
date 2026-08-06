@@ -1,23 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
-import { HIERARCHY, ROLE_LABELS, type WebRole } from "@/lib/roles";
+import { useState, useTransition } from "react";
+import { ROLE_LABELS, type WebRole } from "@/lib/roles";
 import { setDevRoleAction } from "@/app/dev/actions";
 
-// Leadership first so "Dismount" (entry role) is not confused with the guild name.
-const OPTIONS = (
-  ["admin", "caller", "member", "recruit", "novice", "dismount"] as const
-).filter((r): r is WebRole => (HIERARCHY as string[]).includes(r));
+const OPTIONS: WebRole[] = [
+  "admin",
+  "caller",
+  "member",
+  "recruit",
+  "novice",
+  "dismount",
+];
 
 export function DevRoleSwitcher({ current }: { current: WebRole }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [value, setValue] = useState(current);
-
-  useEffect(() => {
-    setValue(current);
-  }, [current]);
 
   return (
     <div className="inline-flex items-center gap-1">

@@ -100,6 +100,11 @@ export function EventBoard({
 }) {
   const [, startTransition] = useTransition();
   const [signups, setSignups] = useState(initialSignups);
+  const [signupsSource, setSignupsSource] = useState(initialSignups);
+  if (initialSignups !== signupsSource) {
+    setSignupsSource(initialSignups);
+    setSignups(initialSignups);
+  }
   const [dragged, setDragged] = useState<BoardSignup | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const [hoverSlot, setHoverSlot] = useState<number | null>(null);
@@ -107,10 +112,6 @@ export function EventBoard({
   const [pickedRoles, setPickedRoles] = useState<string[]>([]);
   const [fill, setFill] = useState(false);
   const draggedRef = useRef<BoardSignup | null>(null);
-
-  useEffect(() => {
-    setSignups(initialSignups);
-  }, [initialSignups]);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,16 +131,6 @@ export function EventBoard({
       clearInterval(id);
     };
   }, [eventId]);
-
-  const assign = (slotId: number, signupId: number | "") => {
-    const fd = new FormData();
-    fd.set("event_id", String(eventId));
-    fd.set("slot_id", String(slotId));
-    fd.set("signup_id", String(signupId));
-    startTransition(() => void assignSlotAction(fd));
-  };
-  const assignRef = useRef(assign);
-  assignRef.current = assign;
 
   // Pointer drag (not HTML5 DnD) so wheel scroll keeps working.
   useEffect(() => {
@@ -189,9 +180,17 @@ export function EventBoard({
       const slotEl = el?.closest("[data-drop-slot]") as HTMLElement | null;
       const waitEl = el?.closest("[data-drop-waiting]");
       if (current && slotEl?.dataset.dropSlot) {
-        assignRef.current(Number(slotEl.dataset.dropSlot), current.id);
+        const fd = new FormData();
+        fd.set("event_id", String(eventId));
+        fd.set("slot_id", slotEl.dataset.dropSlot);
+        fd.set("signup_id", String(current.id));
+        startTransition(() => void assignSlotAction(fd));
       } else if (current?.slot_id != null && waitEl) {
-        assignRef.current(current.slot_id, "");
+        const fd = new FormData();
+        fd.set("event_id", String(eventId));
+        fd.set("slot_id", String(current.slot_id));
+        fd.set("signup_id", "");
+        startTransition(() => void assignSlotAction(fd));
       }
       draggedRef.current = null;
       setDragged(null);
@@ -210,7 +209,7 @@ export function EventBoard({
       window.removeEventListener("pointerup", endDrag);
       window.removeEventListener("pointercancel", endDrag);
     };
-  }, [dragged]);
+  }, [dragged, eventId, startTransition]);
 
   const startPointerDrag = (signup: BoardSignup, e: React.PointerEvent) => {
     if (!isCaller || e.button !== 0) return;
