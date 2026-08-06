@@ -16,6 +16,7 @@ import {
   unsignAction,
   assignSlotAction,
 } from "@/app/akce/actions";
+import { DevAddTestUser } from "@/components/dev-add-test-user";
 
 export type BoardSlot = {
   id: number;
@@ -86,6 +87,7 @@ export function EventBoard({
   discordId,
   canSignup,
   isCaller,
+  showDevTools = false,
 }: {
   eventId: number;
   slots: BoardSlot[];
@@ -93,6 +95,8 @@ export function EventBoard({
   discordId: string;
   canSignup: boolean;
   isCaller: boolean;
+  /** Local sandbox: add simulated Test user N signups. */
+  showDevTools?: boolean;
 }) {
   const [, startTransition] = useTransition();
   const [signups, setSignups] = useState(initialSignups);
@@ -464,6 +468,10 @@ export function EventBoard({
                 </p>
               )}
             </form>
+          )}
+
+          {showDevTools && (
+            <DevAddTestUser eventId={eventId} roles={distinctRoles} />
           )}
 
           {/* Čekající hráči — pro callera zároveň drop zóna */}
