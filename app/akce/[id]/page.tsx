@@ -7,6 +7,7 @@ import { LocalTime } from "@/components/local-time";
 import { deleteEventAction } from "../actions";
 import { ConfirmForm } from "@/components/confirm-form";
 import { EventBoard } from "@/components/event-board";
+import { isDevEnvironment } from "@/lib/dev-env";
 import { eventPath } from "@/lib/slug";
 
 export default async function AkceDetailPage({
@@ -118,6 +119,7 @@ export default async function AkceDetailPage({
         discordId={user.discordId}
         canSignup={atLeast(user.webRole, "dismount") && !locked}
         isCaller={atLeast(user.webRole, "caller") && !locked}
+        showDevTools={isDevEnvironment() && !locked}
       />
     </div>
   );
