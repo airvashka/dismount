@@ -49,6 +49,9 @@ AGENTS.md
 CLAUDE.md
 .claude/
 
+# Local Cursor rules / agent config (not shared via the repo)
+.cursor/
+
 # guildovní data (kompozice ze sheetu)
 scripts/seed-heavybrawl.mjs
 
