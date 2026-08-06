@@ -254,10 +254,20 @@ export function EventBoard({
     <div className="mt-6">
       {dragged && dragPos && (
         <div
-          className="pointer-events-none fixed z-50 rounded border border-accent bg-surface px-2.5 py-1.5 text-sm shadow-lg"
+          className="pointer-events-none fixed z-50 flex items-center gap-2 rounded border border-accent bg-surface px-2.5 py-1.5 text-sm shadow-lg"
           style={{ left: dragPos.x + 12, top: dragPos.y + 12 }}
         >
-          <span className="font-medium">{dragged.display_name}</span>
+          <span className="text-muted select-none" aria-hidden>
+            ⠿
+          </span>
+          <span className="font-medium whitespace-nowrap">
+            {dragged.display_name}
+          </span>
+          <OfferChips
+            offers={parseOffers(dragged.offers)}
+            slots={slots}
+            size={30}
+          />
         </div>
       )}
       {mySignup && (
