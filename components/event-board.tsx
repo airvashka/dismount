@@ -6,7 +6,7 @@
 // - vpravo přihláška (výběr rolí podle priority nebo FILL) a kompaktní
 //   karty čekajících, které caller přetahuje myší na sloty.
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { PARTY_MAX, parseOffers } from "@/lib/comp-format";
 import { slotIconUrls } from "@/lib/albion";
 import { GearChips } from "@/components/gear-chips";
@@ -101,10 +101,12 @@ export function EventBoard({
   const [, startTransition] = useTransition();
   const [signups, setSignups] = useState(initialSignups);
   const [dragged, setDragged] = useState<BoardSignup | null>(null);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const [hoverSlot, setHoverSlot] = useState<number | null>(null);
   const [hoverPanel, setHoverPanel] = useState(false);
   const [pickedRoles, setPickedRoles] = useState<string[]>([]);
   const [fill, setFill] = useState(false);
+  const draggedRef = useRef<BoardSignup | null>(null);
 
   useEffect(() => {
     setSignups(initialSignups);
@@ -129,48 +131,93 @@ export function EventBoard({
     };
   }, [eventId]);
 
-  // HTML5 DnD blocks normal scrolling — auto-scroll near viewport edges + wheel.
+  const assign = (slotId: number, signupId: number | "") => {
+    const fd = new FormData();
+    fd.set("event_id", String(eventId));
+    fd.set("slot_id", String(slotId));
+    fd.set("signup_id", String(signupId));
+    startTransition(() => void assignSlotAction(fd));
+  };
+  const assignRef = useRef(assign);
+  assignRef.current = assign;
+
+  // Pointer drag (not HTML5 DnD) so wheel scroll keeps working.
   useEffect(() => {
     if (!dragged) return;
+    draggedRef.current = dragged;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "grabbing";
 
     const EDGE = 72;
     const MAX_SPEED = 32;
-    let latestY = window.innerHeight / 2;
-    let raf = 0;
-    let running = true;
 
-    const onDragOver = (e: DragEvent) => {
-      latestY = e.clientY;
-    };
-
-    const onWheel = (e: WheelEvent) => {
-      window.scrollBy(0, e.deltaY);
-    };
-
-    const step = () => {
-      if (!running) return;
-      const vh = window.innerHeight;
-      if (latestY < EDGE) {
-        const t = (EDGE - latestY) / EDGE;
-        window.scrollBy(0, -Math.ceil(MAX_SPEED * t));
-      } else if (latestY > vh - EDGE) {
-        const t = (latestY - (vh - EDGE)) / EDGE;
-        window.scrollBy(0, Math.ceil(MAX_SPEED * t));
+    const hitTest = (x: number, y: number) => {
+      const el = document.elementFromPoint(x, y);
+      const slotEl = el?.closest("[data-drop-slot]") as HTMLElement | null;
+      const waitEl = el?.closest("[data-drop-waiting]");
+      if (slotEl?.dataset.dropSlot) {
+        setHoverSlot(Number(slotEl.dataset.dropSlot));
+        setHoverPanel(false);
+        return;
       }
-      raf = requestAnimationFrame(step);
+      if (waitEl) {
+        setHoverSlot(null);
+        setHoverPanel(true);
+        return;
+      }
+      setHoverSlot(null);
+      setHoverPanel(false);
     };
 
-    document.addEventListener("dragover", onDragOver);
-    document.addEventListener("wheel", onWheel, { passive: true });
-    raf = requestAnimationFrame(step);
+    const onMove = (e: PointerEvent) => {
+      setDragPos({ x: e.clientX, y: e.clientY });
+      hitTest(e.clientX, e.clientY);
+      const vh = window.innerHeight;
+      if (e.clientY < EDGE) {
+        window.scrollBy(0, -Math.ceil((MAX_SPEED * (EDGE - e.clientY)) / EDGE));
+      } else if (e.clientY > vh - EDGE) {
+        window.scrollBy(
+          0,
+          Math.ceil((MAX_SPEED * (e.clientY - (vh - EDGE))) / EDGE)
+        );
+      }
+    };
 
+    const endDrag = (e: PointerEvent) => {
+      const current = draggedRef.current;
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const slotEl = el?.closest("[data-drop-slot]") as HTMLElement | null;
+      const waitEl = el?.closest("[data-drop-waiting]");
+      if (current && slotEl?.dataset.dropSlot) {
+        assignRef.current(Number(slotEl.dataset.dropSlot), current.id);
+      } else if (current?.slot_id != null && waitEl) {
+        assignRef.current(current.slot_id, "");
+      }
+      draggedRef.current = null;
+      setDragged(null);
+      setDragPos(null);
+      setHoverSlot(null);
+      setHoverPanel(false);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", endDrag);
+    window.addEventListener("pointercancel", endDrag);
     return () => {
-      running = false;
-      cancelAnimationFrame(raf);
-      document.removeEventListener("dragover", onDragOver);
-      document.removeEventListener("wheel", onWheel);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", endDrag);
+      window.removeEventListener("pointercancel", endDrag);
     };
   }, [dragged]);
+
+  const startPointerDrag = (signup: BoardSignup, e: React.PointerEvent) => {
+    if (!isCaller || e.button !== 0) return;
+    e.preventDefault();
+    setDragged(signup);
+    setDragPos({ x: e.clientX, y: e.clientY });
+  };
 
   const bySlot = new Map(signups.filter((s) => s.slot_id).map((s) => [s.slot_id, s]));
   const waiting = signups.filter((s) => s.slot_id === null);
@@ -179,7 +226,6 @@ export function EventBoard({
     ? slots.find((s) => s.id === mySignup.slot_id)
     : null;
 
-  // Party = po sobě jdoucí sloty se stejným názvem
   const groups: { name: string; slots: BoardSlot[] }[] = [];
   for (const s of slots) {
     const last = groups[groups.length - 1];
@@ -188,14 +234,6 @@ export function EventBoard({
   }
 
   const distinctRoles = [...new Set(slots.map((s) => s.role_name))];
-
-  const assign = (slotId: number, signupId: number | "") => {
-    const fd = new FormData();
-    fd.set("event_id", String(eventId));
-    fd.set("slot_id", String(slotId));
-    fd.set("signup_id", String(signupId));
-    startTransition(() => void assignSlotAction(fd));
-  };
 
   const slotMatchesDragged = (slot: BoardSlot): boolean => {
     if (!dragged) return false;
@@ -214,7 +252,14 @@ export function EventBoard({
 
   return (
     <div className="mt-6">
-      {/* Stavový banner */}
+      {dragged && dragPos && (
+        <div
+          className="pointer-events-none fixed z-50 rounded border border-accent bg-surface px-2.5 py-1.5 text-sm shadow-lg"
+          style={{ left: dragPos.x + 12, top: dragPos.y + 12 }}
+        >
+          <span className="font-medium">{dragged.display_name}</span>
+        </div>
+      )}
       {mySignup && (
         <div
           className={
@@ -324,18 +369,7 @@ export function EventBoard({
                         return (
                           <tr
                             key={slot.id}
-                            onDragOver={droppable ? (e) => { e.preventDefault(); setHoverSlot(slot.id); } : undefined}
-                            onDragLeave={droppable ? () => setHoverSlot((h) => (h === slot.id ? null : h)) : undefined}
-                            onDrop={
-                              droppable
-                                ? (e) => {
-                                    e.preventDefault();
-                                    setHoverSlot(null);
-                                    if (dragged) assign(slot.id, dragged.id);
-                                    setDragged(null);
-                                  }
-                                : undefined
-                            }
+                            data-drop-slot={droppable ? slot.id : undefined}
                             className={
                               "group border-t border-border first:border-t-0 transition-all " +
                               (dimmed ? "opacity-30 " : "") +
@@ -370,19 +404,9 @@ export function EventBoard({
                             <td className="px-2 py-1">
                               {taken ? (
                                 <span
-                                  draggable={isCaller}
-                                  onDragStart={
+                                  onPointerDown={
                                     isCaller
-                                      ? (e) => {
-                                          e.dataTransfer.setData("text/plain", String(taken.id));
-                                          e.dataTransfer.effectAllowed = "move";
-                                          setDragged(taken);
-                                        }
-                                      : undefined
-                                  }
-                                  onDragEnd={
-                                    isCaller
-                                      ? () => { setDragged(null); setHoverSlot(null); setHoverPanel(false); }
+                                      ? (e) => startPointerDrag(taken, e)
                                       : undefined
                                   }
                                   title={isCaller ? "Přetáhni na jiný slot nebo do „K rozřazení“" : undefined}
@@ -390,7 +414,7 @@ export function EventBoard({
                                     "whitespace-nowrap " +
                                     (isMine ? "text-accent " : "text-red-300 ") +
                                     (isCaller
-                                      ? "inline-flex items-center gap-1.5 rounded border border-border bg-surface px-2 py-0.5 cursor-grab active:cursor-grabbing hover:border-accent transition-colors "
+                                      ? "inline-flex items-center gap-1.5 rounded border border-border bg-surface px-2 py-0.5 cursor-grab active:cursor-grabbing hover:border-accent transition-colors touch-none select-none "
                                       : "") +
                                     (dragged?.id === taken.id ? "opacity-50" : "")
                                   }
@@ -512,25 +536,9 @@ export function EventBoard({
             <DevAddTestUser eventId={eventId} roles={distinctRoles} />
           )}
 
-          {/* Čekající hráči — pro callera zároveň drop zóna */}
           <div
-            onDragOver={
-              isCaller && dragged?.slot_id != null
-                ? (e) => { e.preventDefault(); setHoverPanel(true); }
-                : undefined
-            }
-            onDragLeave={
-              isCaller && dragged?.slot_id != null ? () => setHoverPanel(false) : undefined
-            }
-            onDrop={
-              isCaller && dragged?.slot_id != null
-                ? (e) => {
-                    e.preventDefault();
-                    setHoverPanel(false);
-                    if (dragged?.slot_id != null) assign(dragged.slot_id, "");
-                    setDragged(null);
-                  }
-                : undefined
+            data-drop-waiting={
+              isCaller && dragged?.slot_id != null ? "1" : undefined
             }
             className={
               "rounded-lg border-2 border-dashed p-2 -m-2 transition-colors " +
@@ -558,25 +566,15 @@ export function EventBoard({
                   return (
                     <li
                       key={s.id}
-                      draggable={isCaller}
-                      onDragStart={
-                        isCaller
-                          ? (e) => {
-                              e.dataTransfer.setData("text/plain", String(s.id));
-                              e.dataTransfer.effectAllowed = "move";
-                              setDragged(s);
-                            }
-                          : undefined
-                      }
-                      onDragEnd={
-                        isCaller
-                          ? () => { setDragged(null); setHoverSlot(null); }
-                          : undefined
+                      onPointerDown={
+                        isCaller ? (e) => startPointerDrag(s, e) : undefined
                       }
                       title={s.note || undefined}
                       className={
                         "flex items-center gap-2 rounded border border-border bg-surface px-2.5 py-1.5 text-sm " +
-                        (isCaller ? "cursor-grab active:cursor-grabbing hover:border-accent " : "") +
+                        (isCaller
+                          ? "cursor-grab active:cursor-grabbing hover:border-accent touch-none select-none "
+                          : "") +
                         (dragged?.id === s.id ? "opacity-50 " : "")
                       }
                     >
