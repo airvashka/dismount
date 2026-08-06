@@ -27,12 +27,28 @@ better-sqlite3 · Docker
 
 ```bash
 npm install
-cp .env.example .env.local   # vyplnit Discord klíče, viz komentáře
+cp .env.example .env.local
 npm run dev
 ```
 
-Bez Discord klíčů web běží v režimu bez loginu; pro lokální testování rolí
-lze v dev nastavit `DEV_FAKE_ROLE` (viz `.env.example` / `lib/session.ts`).
+### Local sandbox (`DEV_ENVIRONMENT`)
+
+In `.env.local`:
+
+```env
+AUTH_SECRET=any-random-string
+DEV_ENVIRONMENT=true
+DEV_FAKE_ROLE=admin
+DEV_FAKE_NAME=Local admin
+```
+
+- Fake Leadership login (role dropdown in the header).
+- Discord **never** uses production channel IDs. Optional test channels:
+  `DEV_DISCORD_CTA_CHANNEL_ID` (+ bot token). If unset → Discord is no-op.
+- No `@everyone` pings in the sandbox.
+- Event board can add simulated signups (Test user N).
+
+Ignored unless `NODE_ENV=development`. See `.env.example`.
 
 ## Produkce
 
